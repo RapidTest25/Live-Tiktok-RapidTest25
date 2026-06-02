@@ -48,6 +48,7 @@
       font-size: clamp(2rem, 5vw, 4rem);
       line-height: 1.05;
       font-weight: 900;
+      min-height: 1.05em;
     }
     .viewer {
       font-size: clamp(1rem, 2.2vw, 1.4rem);
@@ -59,6 +60,14 @@
       font-size: clamp(1rem, 2vw, 1.25rem);
       color: #8fe7e0;
       font-weight: 700;
+    }
+    .spinning {
+      animation: pulse 0.18s linear infinite alternate;
+      color: #dfffb1;
+    }
+    @keyframes pulse {
+      from { transform: translateY(0) scale(1); opacity: 0.78; }
+      to { transform: translateY(-2px) scale(1.02); opacity: 1; }
     }
     .empty {
       text-align: center;
@@ -84,20 +93,17 @@
         const queue = Array.isArray(parsed.jokiQueue) ? parsed.jokiQueue : [];
         const spinEntries = queue
           .filter((entry) => entry && entry.rewardMode === "spin")
-          .sort((a, b) => (b.lastAddedAt || b.time || 0) - (a.lastAddedAt || a.time || 0));
+          .sort((a, b) => (b.lastSpinAt || b.lastAddedAt || b.time || 0) - (a.lastSpinAt || a.lastAddedAt || a.time || 0));
         return spinEntries[0] || null;
       } catch (err) {
         return null;
       }
     }
 
-    function render() {
-      const entry = getLatestSpinEntry();
-      if (!entry) {
-        root.innerHTML = '<div class="empty">Belum ada hasil spin mutasi</div>';
-        return;
-      }
+    let lastSeenSpinKey = "";
+    let spinningTimer = null;
 
+    function renderFinal(entry) {
       const giftQty = Number(entry.giftQty) || Number(entry.qty) || 1;
       const giftText = entry.giftName && entry.giftName !== "-"
         ? `${entry.giftName}${giftQty > 1 ? ` x${giftQty}` : ""}${entry.diamondCount ? ` (${entry.diamondCount}🪙)` : ""}`
@@ -109,6 +115,55 @@
         <div class="viewer">${entry.user || "Viewer"}</div>
         <div class="gift">${giftText}</div>
       `;
+    }
+
+    function animateSpin(entry) {
+      const spinResults = entry.spinResults || {};
+      const labels = Object.keys(spinResults).length ? Object.keys(spinResults) : ["Golden", "Diamond", "Plasma", "Radio Active"];
+      const giftQty = Number(entry.giftQty) || Number(entry.qty) || 1;
+      const giftText = entry.giftName && entry.giftName !== "-"
+        ? `${entry.giftName}${giftQty > 1 ? ` x${giftQty}` : ""}${entry.diamondCount ? ` (${entry.diamondCount}🪙)` : ""}`
+        : "Gift";
+
+      let step = 0;
+      clearInterval(spinningTimer);
+      root.innerHTML = `
+        <div class="tag">HASIL SPIN MUTASI</div>
+        <div class="title spinning">${labels[0]}</div>
+        <div class="viewer">${entry.user || "Viewer"}</div>
+        <div class="gift">${giftText}</div>
+      `;
+
+      const title = root.querySelector('.title');
+      spinningTimer = setInterval(() => {
+        step += 1;
+        if (title) {
+          title.textContent = labels[step % labels.length];
+        }
+      }, 110);
+
+      setTimeout(() => {
+        clearInterval(spinningTimer);
+        spinningTimer = null;
+        renderFinal(entry);
+      }, 2400);
+    }
+
+    function render() {
+      const entry = getLatestSpinEntry();
+      if (!entry) {
+        root.innerHTML = '<div class="empty">Belum ada hasil spin mutasi</div>';
+        return;
+      }
+      const spinKey = `${entry.id}:${entry.lastSpinAt || entry.lastAddedAt || entry.time || 0}:${entry.action || ''}`;
+      if (spinKey !== lastSeenSpinKey) {
+        lastSeenSpinKey = spinKey;
+        animateSpin(entry);
+        return;
+      }
+      if (!spinningTimer) {
+        renderFinal(entry);
+      }
     }
 
     render();

@@ -126,6 +126,17 @@
           </label>
         </div>
         <div id="winnerDisplay" class="winner-display">Belum ada pemenang</div>
+        <div class="spinner-history-header">
+          <strong>History Pemenang</strong>
+          <div class="joki-panel-header-actions">
+            <button id="exportWinnersBtn" class="ghost small">Export JSON</button>
+            <button id="clearWinnersBtn" class="ghost small">Clear</button>
+          </div>
+        </div>
+        <div id="winnerList" class="list winner-list compact-list"></div>
+        <div class="panel-footer compact-footer">
+          <span id="winnerCount" class="count">0 pemenang</span>
+        </div>
       </section>
 
       <details class="tools-drawer card">
@@ -181,21 +192,6 @@
           <button id="addRuleBtn" class="primary">Tambah Rule</button>
         </div>
         <div id="ruleList" class="list rule-list"></div>
-      </section>
-
-      <section class="card panel">
-        <div class="panel-header">
-          <div>
-            <h2>Winners</h2>
-            <p class="panel-sub">Riwayat pemenang dari hasil spin.</p>
-          </div>
-          <button id="exportWinnersBtn" class="ghost">Export JSON</button>
-        </div>
-        <div id="winnerList" class="list winner-list"></div>
-        <div class="panel-footer">
-          <span id="winnerCount" class="count">0 pemenang</span>
-          <button id="clearWinnersBtn" class="ghost">Clear</button>
-        </div>
       </section>
 
       </details>

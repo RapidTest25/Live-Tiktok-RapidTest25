@@ -35,17 +35,47 @@ const DEFAULT_GIFT_RULES = [
     mode: "spin",
     poolId: "pool-mutasi",
     unitCount: 1,
-    action: "Spin mutasi",
+    action: "1c br random mutasi",
     locked: true
   },
   {
-    id: "rule-gg-kick-celestial",
+    id: "rule-rose-kick-celestial",
     matchType: "name",
-    matchValue: "gg",
+    matchValue: "rose",
     mode: "direct",
     rewardAction: "1x kick celestial mutasi",
     unitCount: 3,
-    action: "1x kick celestial mutasi",
+    action: "3c kick celestial mutasi",
+    locked: true
+  },
+  {
+    id: "rule-heartme-br-celestial",
+    matchType: "name",
+    matchValue: "heart me",
+    mode: "direct",
+    rewardAction: "1 br celestial + og",
+    unitCount: 1,
+    action: "1 br celestial + og",
+    locked: true
+  },
+  {
+    id: "rule-fingerheart-max-br",
+    matchType: "name",
+    matchValue: "finger heart",
+    mode: "direct",
+    rewardAction: "Max in br kamu + bonus br mutasi",
+    unitCount: 1,
+    action: "Max in br kamu + bonus br mutasi",
+    locked: true
+  },
+  {
+    id: "rule-doughnut-meowl-bacon",
+    matchType: "name",
+    matchValue: "doughnut",
+    mode: "direct",
+    rewardAction: "Meowl bacon max + bonus",
+    unitCount: 1,
+    action: "Meowl bacon max + bonus",
     locked: true
   },
   {
@@ -438,7 +468,14 @@ function loadState() {
       }
     }
 
-    const criticalRuleIds = ["rule-rose-spin-mutasi", "rule-gg-kick-celestial", "rule-default"];
+    const criticalRuleIds = [
+      "rule-rose-spin-mutasi",
+      "rule-rose-kick-celestial",
+      "rule-heartme-br-celestial",
+      "rule-fingerheart-max-br",
+      "rule-doughnut-meowl-bacon",
+      "rule-default"
+    ];
     const existingIds = new Set(state.giftRules.map((r) => r.id));
     let rulesInjected = false;
     if (migratedGiftManualEntries) {
@@ -1079,7 +1116,31 @@ function processGiftRules(msg) {
   };
 
   const nameRules = state.giftRules.filter((r) => r.matchType === "name");
-  for (const rule of nameRules) {
+  const matchingNameRules = nameRules.filter((r) => checkRule(r));
+
+  if (giftName.includes("rose")) {
+    const roseDirectRule = matchingNameRules.find((r) => r.id === "rule-rose-kick-celestial");
+    const roseSpinRule = matchingNameRules.find((r) => r.id === "rule-rose-spin-mutasi");
+    if (roseDirectRule || roseSpinRule) {
+      const directQty = roseDirectRule ? Math.floor(repeatCount / 3) : 0;
+      const spinQty = roseSpinRule ? (repeatCount % 3) : 0;
+
+      if (directQty > 0) {
+        fireDirectRule(roseDirectRule, directQty, { giftQty: directQty * 3 });
+      }
+      if (spinQty > 0) {
+        fireSpinRule(roseSpinRule, spinQty);
+      }
+      if (directQty > 0 || spinQty > 0) {
+        return;
+      }
+    }
+  }
+
+  for (const rule of matchingNameRules) {
+    if (rule.id === "rule-rose-kick-celestial" || rule.id === "rule-rose-spin-mutasi") {
+      continue;
+    }
     if (checkRule(rule)) {
       processRule(rule);
       return;
@@ -1136,6 +1197,7 @@ function addJokiQueueEntry(entry) {
       if (entry.rewardMode === "spin") {
         existing.spinResults = addSpinResultCounts(existing.spinResults, entry.spinResults);
         existing.action = summarizeSpinResults(existing.spinResults, entry.poolId || existing.poolId);
+        existing.lastSpinAt = Date.now();
       }
       existing.lastAddedAt = Date.now();
       saveState();
@@ -1166,7 +1228,8 @@ function addJokiQueueEntry(entry) {
     spinResults: entry.spinResults || null,
     poolId: entry.poolId || null,
     ruleId: entry.ruleId || null,
-    unitCount: entry.unitCount || 1
+    unitCount: entry.unitCount || 1,
+    lastSpinAt: entry.rewardMode === "spin" ? Date.now() : null
   });
 
   if (state.jokiQueue.length > MAX_JOKI_ITEMS) {
