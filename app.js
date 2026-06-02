@@ -14,16 +14,49 @@ const WHEEL_COLORS = [
   "#fb5607"
 ];
 
+const DEFAULT_SPIN_POOLS = [
+  {
+    id: "pool-mutasi",
+    name: "BR Random Mutasi",
+    items: [
+      { id: "golden", label: "Golden", weight: 45 },
+      { id: "diamond", label: "Diamond", weight: 30 },
+      { id: "plasma", label: "Plasma", weight: 18 },
+      { id: "radioactive", label: "Radio Active", weight: 7 }
+    ]
+  }
+];
+
 const DEFAULT_GIFT_RULES = [
-  { id: "rule-name-heartme", matchType: "name", matchValue: "heart me", action: "1x kick celestial" },
-  { id: "rule-name-rose", matchType: "name", matchValue: "rose", action: "1x kick random" },
-  { id: "rule-equiv-1", matchType: "diamond", matchValue: 1, action: "1x kick random" },
-  { id: "rule-name-fingerheart", matchType: "name", matchValue: "finger heart", action: "max in lvl BR + bonus" },
-  { id: "rule-equiv-5", matchType: "diamond", matchValue: 5, action: "max in lvl BR + bonus" },
-  { id: "rule-name-superpopular", matchType: "name", matchValue: "super popular", action: "3 celestial lvl max" },
-  { id: "rule-equiv-9", matchType: "diamond", matchValue: 9, action: "3 celestial lvl max" },
-  { id: "rule-equiv-30", matchType: "diamond", matchValue: 30, action: "bacon meowl lvl max + bonus" },
-  { id: "rule-default", matchType: "any", matchValue: "*", action: "1x kick", locked: true }
+  {
+    id: "rule-rose-spin-mutasi",
+    matchType: "name",
+    matchValue: "rose",
+    mode: "spin",
+    poolId: "pool-mutasi",
+    unitCount: 1,
+    action: "Spin mutasi",
+    locked: true
+  },
+  {
+    id: "rule-gg-kick-celestial",
+    matchType: "name",
+    matchValue: "gg",
+    mode: "direct",
+    rewardAction: "1x kick celestial mutasi",
+    unitCount: 3,
+    action: "1x kick celestial mutasi",
+    locked: true
+  },
+  {
+    id: "rule-default",
+    matchType: "any",
+    matchValue: "*",
+    mode: "direct",
+    rewardAction: "Belum diatur",
+    action: "Belum diatur",
+    locked: true
+  }
 ];
 
 const POPULAR_GIFTS = [
@@ -42,7 +75,8 @@ const POPULAR_GIFTS = [
   { name: "Orange", id: "orange", value: "orange" },
   { name: "Fireworks", id: "fireworks", value: "fireworks" },
   { name: "Gift Box", id: "giftbox", value: "gift box" },
-  { name: "Cheer Me Up", id: "cheer", value: "cheer me up" }
+  { name: "Cheer Me Up", id: "cheer", value: "cheer me up" },
+  { name: "GG", id: "gg", value: "gg" }
 ];
 
 const state = {
@@ -50,6 +84,8 @@ const state = {
   winners: [],
   jokiQueue: [],
   giftRules: [],
+  spinPools: [],
+  giftProgress: {},
   settings: {
     autoAddFromChat: false,
     removeAfterSpin: true,
@@ -287,6 +323,8 @@ function saveState() {
     winners: state.winners,
     jokiQueue: state.jokiQueue,
     giftRules: state.giftRules,
+    spinPools: state.spinPools,
+    giftProgress: state.giftProgress,
     settings: state.settings,
     nextNumber: state.nextNumber,
     lastUsername: state.lastUsername,
@@ -304,6 +342,10 @@ function loadState() {
     state.sessionNumbers = Array.isArray(parsed.sessionNumbers) ? parsed.sessionNumbers : [];
     state.winners = Array.isArray(parsed.winners) ? parsed.winners : [];
     state.jokiQueue = Array.isArray(parsed.jokiQueue) ? parsed.jokiQueue : [];
+    state.spinPools = Array.isArray(parsed.spinPools) && parsed.spinPools.length
+      ? parsed.spinPools
+      : DEFAULT_SPIN_POOLS.map((pool) => ({ ...pool, items: pool.items.map((item) => ({ ...item })) }));
+    state.giftProgress = parsed.giftProgress && typeof parsed.giftProgress === "object" ? parsed.giftProgress : {};
     
     // Migrate old whitelist data to jokiQueue
     if (Array.isArray(parsed.whitelist) && parsed.whitelist.length > 0) {
@@ -326,6 +368,7 @@ function loadState() {
       const normalized = { ...entry, status: entry.status || "pending" };
       normalized.notes = typeof entry.notes === "string" ? entry.notes : "";
       normalized.tiktokId = entry.tiktokId || null;
+      normalized.giftQty = Number(entry.giftQty) || Number(entry.qty) || 1;
       if (entry.source === "gift" && entry.username && !normalized.tiktokId) {
         normalized.tiktokId = entry.username;
         normalized.username = null;
@@ -343,7 +386,7 @@ function loadState() {
     });
     state.giftRules = Array.isArray(parsed.giftRules) && parsed.giftRules.length
       ? parsed.giftRules
-      : DEFAULT_GIFT_RULES.slice();
+      : DEFAULT_GIFT_RULES.map((rule) => ({ ...rule }));
 
     const OLD_DEFAULT_RULE_IDS = [
       "rule-diamond-1",
@@ -351,11 +394,19 @@ function loadState() {
       "rule-diamond-5",
       "rule-diamond-10",
       "rule-name-doughnut",
-      "rule-diamond-30"
+      "rule-diamond-30",
+      "rule-name-heartme",
+      "rule-name-rose",
+      "rule-equiv-1",
+      "rule-name-fingerheart",
+      "rule-equiv-5",
+      "rule-name-superpopular",
+      "rule-equiv-9",
+      "rule-equiv-30"
     ];
     const hasOldDefault = state.giftRules.some((r) => OLD_DEFAULT_RULE_IDS.includes(r.id));
     if (hasOldDefault) {
-      state.giftRules = DEFAULT_GIFT_RULES.slice();
+      state.giftRules = DEFAULT_GIFT_RULES.map((rule) => ({ ...rule }));
     } else {
       const userRuleIds = new Set(state.giftRules.map((r) => r.id));
       const missingDefaults = DEFAULT_GIFT_RULES.filter((r) => !userRuleIds.has(r.id));
@@ -364,7 +415,7 @@ function loadState() {
       }
     }
 
-    const criticalRuleIds = ["rule-equiv-1", "rule-equiv-5", "rule-equiv-9", "rule-equiv-30"];
+    const criticalRuleIds = ["rule-rose-spin-mutasi", "rule-gg-kick-celestial", "rule-default"];
     const existingIds = new Set(state.giftRules.map((r) => r.id));
     let rulesInjected = false;
     criticalRuleIds.forEach((id) => {
@@ -376,13 +427,7 @@ function loadState() {
         }
       }
     });
-    if (!existingIds.has("rule-default")) {
-      const def = DEFAULT_GIFT_RULES.find((r) => r.id === "rule-default");
-      if (def) {
-        state.giftRules.push({ ...def });
-        rulesInjected = true;
-      }
-    } else {
+    if (existingIds.has("rule-default")) {
       const defRule = state.giftRules.find((r) => r.id === "rule-default");
       if (defRule && !defRule.locked) {
         defRule.locked = true;
@@ -391,10 +436,21 @@ function loadState() {
     }
 
     const defaultRule = state.giftRules.find((r) => r.id === "rule-default");
-    const defaultAction = defaultRule ? defaultRule.action : "1x kick";
+    const defaultActions = new Set([defaultRule ? defaultRule.action : "Belum diatur", "1x kick"]);
+    const existingPoolIds = new Set(state.spinPools.map((pool) => pool.id));
+    DEFAULT_SPIN_POOLS.forEach((pool) => {
+      if (!existingPoolIds.has(pool.id)) {
+        state.spinPools.push({ ...pool, items: pool.items.map((item) => ({ ...item })) });
+        rulesInjected = true;
+      }
+    });
     state.jokiQueue = state.jokiQueue.map((entry) => {
       const normalized = { ...entry };
       if (normalized.source === "gift") {
+        if ((!normalized.giftQty || Number(normalized.giftQty) <= 0) && (Number(normalized.unitCount) || 1) > 1) {
+          normalized.giftQty = (Number(normalized.qty) || 1) * (Number(normalized.unitCount) || 1);
+          rulesInjected = true;
+        }
         if (!normalized.matchKey) {
           normalized.matchKey = normalized.unmatched
             ? `${normalized.giftName || "gift"}|${Number(normalized.diamondCount) || 0}`
@@ -403,7 +459,7 @@ function loadState() {
         if (!normalized.consolidateKey) {
           normalized.consolidateKey = normalized.matchKey;
         }
-        if (!normalized.unmatched && normalized.action === defaultAction) {
+        if (!normalized.unmatched && defaultActions.has(normalized.action)) {
           normalized.unmatched = true;
           normalized.matchKey = `${normalized.giftName || "gift"}|${Number(normalized.diamondCount) || 0}`;
           normalized.consolidateKey = normalized.matchKey;
@@ -427,7 +483,7 @@ function loadState() {
     state.backendUrl = parsed.backendUrl || "";
   } catch (err) {
     console.warn("Failed to parse saved state", err);
-    state.giftRules = DEFAULT_GIFT_RULES.slice();
+    state.giftRules = DEFAULT_GIFT_RULES.map((rule) => ({ ...rule }));
   }
 }
 
@@ -851,12 +907,61 @@ function removeSessionNumber(number) {
   drawWheel();
 }
 
+function getSpinPool(poolId) {
+  return state.spinPools.find((pool) => pool.id === poolId) || DEFAULT_SPIN_POOLS.find((pool) => pool.id === poolId) || null;
+}
+
+function rollWeightedPool(poolId) {
+  const pool = getSpinPool(poolId);
+  if (!pool || !Array.isArray(pool.items) || !pool.items.length) return null;
+
+  const totalWeight = pool.items.reduce((sum, item) => sum + Math.max(0, Number(item.weight) || 0), 0);
+  if (totalWeight <= 0) return pool.items[0] || null;
+
+  let roll = Math.random() * totalWeight;
+  for (const item of pool.items) {
+    roll -= Math.max(0, Number(item.weight) || 0);
+    if (roll <= 0) return item;
+  }
+  return pool.items[pool.items.length - 1] || null;
+}
+
+function summarizeSpinResults(spinResults, poolId) {
+  if (!spinResults || typeof spinResults !== "object") return "Spin mutasi";
+  const pool = getSpinPool(poolId);
+  const order = pool && Array.isArray(pool.items) ? pool.items.map((item) => item.label) : Object.keys(spinResults);
+  const parts = [];
+
+  order.forEach((label) => {
+    const qty = Number(spinResults[label]) || 0;
+    if (qty > 0) {
+      parts.push(qty > 1 ? `${label} x${qty}` : label);
+    }
+  });
+
+  return parts.length ? parts.join(", ") : "Spin mutasi";
+}
+
+function addSpinResultCounts(target, added) {
+  const result = { ...(target || {}) };
+  Object.entries(added || {}).forEach(([label, qty]) => {
+    result[label] = (Number(result[label]) || 0) + (Number(qty) || 0);
+  });
+  return result;
+}
+
+function getGiftProgressKey(uniqueId, ruleId) {
+  return `${uniqueId || "unknown"}::${ruleId}`;
+}
+
 function processGiftRules(msg) {
   const pendingStreak = msg.giftType === 1 && !msg.repeatEnd;
   if (pendingStreak) return;
 
   const giftName = normalizeKey(msg.giftName);
   const diamondCount = Number(msg.diamondCount || 0);
+  const repeatCount = Math.max(1, Number(msg.repeatCount) || 1);
+  const userLabel = msg.uniqueId ? `@${msg.uniqueId}` : (msg.nickname || "viewer");
 
   const checkRule = (rule) => {
     if (rule.matchType === "diamond") {
@@ -871,27 +976,86 @@ function processGiftRules(msg) {
     return false;
   };
 
-  const fireRule = (rule, options) => {
+  const fireDirectRule = (rule, rewardQty, options) => {
+    if (rewardQty <= 0) return;
     addJokiQueueEntry({
-      action: rule.action,
-      consolidateKey: !!(options && options.unmatched)
-        ? `${msg.giftName || "gift"}|${diamondCount}`
-        : (rule.id || rule.action || `${msg.giftName || "gift"}|${diamondCount}`),
+      action: rule.rewardAction || rule.action,
+      consolidateKey: (options && options.consolidateKey) || (rule.id || rule.action || `${msg.giftName || "gift"}|${diamondCount}`),
       user: getDisplayLabel(msg),
       username: null,
       tiktokId: msg.uniqueId || null,
       giftName: msg.giftName || "gift",
       diamondCount,
-      qty: msg.repeatCount || 1,
+      qty: rewardQty,
+      giftQty: (options && options.giftQty) || rewardQty,
       source: "gift",
-      unmatched: !!(options && options.unmatched)
+      unmatched: !!(options && options.unmatched),
+      rewardMode: "direct",
+      ruleId: rule.id || null,
+      unitCount: Number(rule.unitCount) || 1
     });
+  };
+
+  const fireSpinRule = (rule, spinQty) => {
+    if (spinQty <= 0) return;
+    const spinResults = {};
+    for (let i = 0; i < spinQty; i += 1) {
+      const rolled = rollWeightedPool(rule.poolId);
+      const label = rolled ? rolled.label : "Mutasi";
+      spinResults[label] = (spinResults[label] || 0) + 1;
+    }
+
+    addJokiQueueEntry({
+      action: summarizeSpinResults(spinResults, rule.poolId),
+      consolidateKey: rule.id || `spin:${rule.poolId || giftName}`,
+      user: getDisplayLabel(msg),
+      username: null,
+      tiktokId: msg.uniqueId || null,
+      giftName: msg.giftName || "gift",
+      diamondCount,
+      qty: spinQty,
+      source: "gift",
+      rewardMode: "spin",
+      spinResults,
+      poolId: rule.poolId || null,
+      ruleId: rule.id || null,
+      unitCount: Number(rule.unitCount) || 1
+    });
+  };
+
+  const processRule = (rule, options) => {
+    if ((rule.mode || "direct") === "spin") {
+      fireSpinRule(rule, repeatCount);
+      return true;
+    }
+
+    const unitCount = Math.max(1, Number(rule.unitCount) || 1);
+    if (unitCount <= 1) {
+      fireDirectRule(rule, repeatCount, { ...(options || {}), giftQty: repeatCount });
+      return true;
+    }
+
+    const progressKey = getGiftProgressKey(msg.uniqueId || userLabel, rule.id || rule.action || giftName);
+    const previousProgress = Number(state.giftProgress[progressKey] || 0);
+    const totalUnits = previousProgress + repeatCount;
+    const rewardQty = Math.floor(totalUnits / unitCount);
+    const remainder = totalUnits % unitCount;
+
+    state.giftProgress[progressKey] = remainder;
+    if (rewardQty > 0) {
+      fireDirectRule(rule, rewardQty, { ...(options || {}), giftQty: rewardQty * unitCount });
+      saveState();
+    } else {
+      saveState();
+      showToast(`${msg.giftName || "Gift"} dari ${userLabel}: progress ${totalUnits}/${unitCount}`, "success");
+    }
+    return true;
   };
 
   const nameRules = state.giftRules.filter((r) => r.matchType === "name");
   for (const rule of nameRules) {
     if (checkRule(rule)) {
-      fireRule(rule);
+      processRule(rule);
       return;
     }
   }
@@ -899,23 +1063,21 @@ function processGiftRules(msg) {
   const diamondRules = state.giftRules.filter((r) => r.matchType === "diamond");
   for (const rule of diamondRules) {
     if (checkRule(rule)) {
-      fireRule(rule);
+      processRule(rule);
       return;
     }
   }
 
   const anyRule = state.giftRules.find((r) => r.matchType === "any");
   if (anyRule) {
-    fireRule(anyRule, { unmatched: true });
-    const userLabel = msg.uniqueId ? `@${msg.uniqueId}` : (msg.nickname || "viewer");
+    processRule(anyRule, { unmatched: true, consolidateKey: `${msg.giftName || "gift"}|${diamondCount}` });
     showToast(
-      `ℹ ${msg.giftName || "Gift"} dari ${userLabel} pakai rule default (${anyRule.action}). Edit rule untuk ganti aksi.`,
+      `ℹ ${msg.giftName || "Gift"} dari ${userLabel} belum ada rule spesifik.`,
       "success"
     );
     return;
   }
 
-  const userLabel = msg.uniqueId ? `@${msg.uniqueId}` : (msg.nickname || "viewer");
   showToast(
     `⚠ ${msg.giftName || "Gift"} dari ${userLabel} belum ada rule. Tambahkan rule atau edit rule default.`,
     "error"
@@ -927,7 +1089,8 @@ function processGiftRules(msg) {
 
 function addJokiQueueEntry(entry) {
   const addedQty = Math.max(1, Number(entry.qty) || 1);
-  const addedCoinsTotal = (Number(entry.diamondCount) || 0) * addedQty;
+  const addedGiftQty = Math.max(1, Number(entry.giftQty) || addedQty);
+  const addedCoinsTotal = (Number(entry.diamondCount) || 0) * addedGiftQty;
   const matchKey = entry.unmatched
     ? `${entry.giftName || "gift"}|${Number(entry.diamondCount) || 0}`
     : (entry.action || `${entry.giftName || "gift"}|${Number(entry.diamondCount) || 0}`);
@@ -942,7 +1105,12 @@ function addJokiQueueEntry(entry) {
     );
     if (existing) {
       existing.qty = (Number(existing.qty) || 1) + addedQty;
+      existing.giftQty = (Number(existing.giftQty) || Number(existing.qty) || 1) + addedGiftQty;
       existing.diamondCount = (Number(existing.diamondCount) || 0) + addedCoinsTotal;
+      if (entry.rewardMode === "spin") {
+        existing.spinResults = addSpinResultCounts(existing.spinResults, entry.spinResults);
+        existing.action = summarizeSpinResults(existing.spinResults, entry.poolId || existing.poolId);
+      }
       existing.lastAddedAt = Date.now();
       saveState();
       renderJokiQueue();
@@ -962,11 +1130,17 @@ function addJokiQueueEntry(entry) {
     giftName: entry.giftName || "-",
     diamondCount: addedCoinsTotal,
     qty: addedQty,
+    giftQty: addedGiftQty,
     time: Date.now(),
     status: entry.status || "pending",
     source: entry.source || "unknown",
     notes: entry.notes || "",
-    unmatched: !!entry.unmatched
+    unmatched: !!entry.unmatched,
+    rewardMode: entry.rewardMode || "direct",
+    spinResults: entry.spinResults || null,
+    poolId: entry.poolId || null,
+    ruleId: entry.ruleId || null,
+    unitCount: entry.unitCount || 1
   });
 
   if (state.jokiQueue.length > MAX_JOKI_ITEMS) {
@@ -1177,6 +1351,9 @@ function formatActionDisplay(action, qty) {
 }
 
 function getJokiBadgeText(entry) {
+  if (entry.rewardMode === "spin" && entry.spinResults) {
+    return summarizeSpinResults(entry.spinResults, entry.poolId);
+  }
   if (entry.unmatched) {
     return entry.giftName && entry.giftName !== "-" ? `${entry.giftName} belum diatur` : "Belum diatur";
   }
@@ -1485,11 +1662,17 @@ function normalizeImportedEntry(entry) {
     giftName: entry.giftName || "-",
     diamondCount: Number(entry.diamondCount) || 0,
     qty: Number(entry.qty) || 1,
+    giftQty: Number(entry.giftQty) || Number(entry.qty) || 1,
     time: Number(entry.time) || Date.now(),
     status: entry.status || "pending",
     source: entry.source || "imported",
     notes: entry.notes || "",
-    unmatched: !!entry.unmatched
+    unmatched: !!entry.unmatched,
+    rewardMode: entry.rewardMode || "direct",
+    spinResults: entry.spinResults || null,
+    poolId: entry.poolId || null,
+    ruleId: entry.ruleId || null,
+    unitCount: entry.unitCount || 1
   };
 }
 
@@ -1502,26 +1685,29 @@ function renderGiftRules() {
 
     const tag = document.createElement("div");
     tag.className = "rule-tag";
-    tag.textContent = rule.matchType === "diamond" ? "Coin" : (rule.matchType === "any" ? "Default" : "Gift");
+    const modeLabel = rule.mode === "spin" ? "Spin" : (rule.matchType === "any" ? "Default" : "Direct");
+    tag.textContent = modeLabel;
 
     const content = document.createElement("div");
     content.className = "item-content";
 
     const title = document.createElement("div");
     title.className = "item-title";
-    title.textContent = rule.action;
+    title.textContent = rule.mode === "spin"
+      ? `Spin: ${(getSpinPool(rule.poolId) || {}).name || rule.poolId || "Mutasi"}`
+      : (rule.rewardAction || rule.action);
 
     const meta = document.createElement("div");
     meta.className = "item-sub";
 
     if (rule.matchType === "diamond") {
-      meta.textContent = `= ${rule.matchValue} coin${rule.matchValue == 1 ? "" : "s"}`;
+      meta.textContent = `Trigger: ${rule.matchValue} coin`;
     } else if (rule.matchType === "any") {
       meta.textContent = "Catch-all untuk gift yang belum ada rule spesifik. Bisa diedit.";
     } else {
       const giftDisplay = POPULAR_GIFTS.find(g => g.value === rule.matchValue);
       const giftName = giftDisplay ? giftDisplay.name : rule.matchValue;
-      meta.textContent = `Gift: ${giftName}`;
+      meta.textContent = `Gift: ${giftName}${rule.unitCount && Number(rule.unitCount) > 1 ? ` x${rule.unitCount}` : ""}`;
     }
 
     content.appendChild(title);
@@ -1579,7 +1765,10 @@ function addGiftRuleFromForm() {
     id: generateId("rule"),
     matchType: type,
     matchValue,
-    action
+    action,
+    rewardAction: action,
+    mode: "direct",
+    unitCount: 1
   });
 
   el.ruleDiamondValue.value = "";
@@ -1624,7 +1813,9 @@ function resetGiftRulesToDefault() {
     "Reset Gift Rules ke Default?",
     "Semua rules akan dikembalikan ke default. Rules custom yang Anda buat akan hilang.",
     () => {
-      state.giftRules = DEFAULT_GIFT_RULES.slice();
+      state.giftRules = DEFAULT_GIFT_RULES.map((rule) => ({ ...rule }));
+      state.spinPools = DEFAULT_SPIN_POOLS.map((pool) => ({ ...pool, items: pool.items.map((item) => ({ ...item })) }));
+      state.giftProgress = {};
       saveState();
       renderGiftRules();
       showToast("Gift rules dikembalikan ke default", "success");
@@ -1742,6 +1933,11 @@ function updateJokiAction(id, newAction) {
   entry.action = cleaned;
   entry.unmatched = false;
   entry.matchKey = cleaned;
+  if (entry.rewardMode === "spin") {
+    entry.rewardMode = "direct";
+    entry.spinResults = null;
+    entry.poolId = null;
+  }
   saveState();
   renderJokiQueue();
 }
@@ -2262,7 +2458,10 @@ function init() {
 
   loadState();
   if (!state.giftRules.length) {
-    state.giftRules = DEFAULT_GIFT_RULES.slice();
+    state.giftRules = DEFAULT_GIFT_RULES.map((rule) => ({ ...rule }));
+  }
+  if (!state.spinPools.length) {
+    state.spinPools = DEFAULT_SPIN_POOLS.map((pool) => ({ ...pool, items: pool.items.map((item) => ({ ...item })) }));
   }
   rebuildSessionIndexes();
 
