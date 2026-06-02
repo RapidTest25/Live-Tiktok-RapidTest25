@@ -400,9 +400,13 @@ function loadState() {
             ? `${normalized.giftName || "gift"}|${Number(normalized.diamondCount) || 0}`
             : (normalized.action || `${normalized.giftName || "gift"}|${Number(normalized.diamondCount) || 0}`);
         }
+        if (!normalized.consolidateKey) {
+          normalized.consolidateKey = normalized.matchKey;
+        }
         if (!normalized.unmatched && normalized.action === defaultAction) {
           normalized.unmatched = true;
           normalized.matchKey = `${normalized.giftName || "gift"}|${Number(normalized.diamondCount) || 0}`;
+          normalized.consolidateKey = normalized.matchKey;
           rulesInjected = true;
         }
         if ((Number(normalized.qty) || 1) > 1 && (Number(normalized.diamondCount) || 0) > 0) {
@@ -870,6 +874,9 @@ function processGiftRules(msg) {
   const fireRule = (rule, options) => {
     addJokiQueueEntry({
       action: rule.action,
+      consolidateKey: !!(options && options.unmatched)
+        ? `${msg.giftName || "gift"}|${diamondCount}`
+        : (rule.id || rule.action || `${msg.giftName || "gift"}|${diamondCount}`),
       user: getDisplayLabel(msg),
       username: null,
       tiktokId: msg.uniqueId || null,
@@ -924,12 +931,13 @@ function addJokiQueueEntry(entry) {
   const matchKey = entry.unmatched
     ? `${entry.giftName || "gift"}|${Number(entry.diamondCount) || 0}`
     : (entry.action || `${entry.giftName || "gift"}|${Number(entry.diamondCount) || 0}`);
+  const consolidateKey = entry.consolidateKey || matchKey;
 
   if (entry.source === "gift" && entry.tiktokId && entry.action) {
     const existing = state.jokiQueue.find((item) =>
       item.source === "gift" &&
       item.tiktokId === entry.tiktokId &&
-      (item.matchKey || item.action) === matchKey &&
+      (item.consolidateKey || item.matchKey || item.action) === consolidateKey &&
       item.status === "pending"
     );
     if (existing) {
@@ -947,6 +955,7 @@ function addJokiQueueEntry(entry) {
     id: generateId("joki"),
     action: entry.action,
     matchKey,
+    consolidateKey,
     user: entry.user,
     username: entry.username || null,
     tiktokId: entry.tiktokId || null,
@@ -1469,6 +1478,7 @@ function normalizeImportedEntry(entry) {
     id: entry.id || generateId("joki"),
     action: entry.action || "Manual",
     matchKey: entry.matchKey || entry.action || `${entry.giftName || "gift"}|${Number(entry.diamondCount) || 0}`,
+    consolidateKey: entry.consolidateKey || entry.matchKey || entry.action || `${entry.giftName || "gift"}|${Number(entry.diamondCount) || 0}`,
     user: entry.user || "Unknown",
     username: entry.username || null,
     tiktokId: entry.tiktokId || null,
