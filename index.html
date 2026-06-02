@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TikTok LIVE Control Deck</title>
+  <meta name="description" content="Live chat, gift feed, whitelist, dan spinner pemenang untuk TikTok LIVE.">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.4.1/socket.io.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <div class="bg-orb orb-1"></div>
+  <div class="bg-orb orb-2"></div>
+  <div class="bg-orb orb-3"></div>
+
+  <div class="app">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Live Stream Toolkit</p>
+        <h1>TikTok LIVE Control Deck</h1>
+        <p class="subtitle">Chat dan gift real-time, whitelist antrean, dan spinner pemenang. Data disimpan di browser (JSON via localStorage), jadi tetap ada setelah refresh.</p>
+      </div>
+      <div class="badge">Ringan + Tanpa Database</div>
+    </header>
+
+    <section class="card connect-card">
+      <div class="row">
+        <div class="field">
+          <label for="usernameInput">Username TikTok (tanpa @)</label>
+          <input id="usernameInput" type="text" placeholder="contoh: namauser">
+        </div>
+        <div class="field">
+          <label for="backendInput">Backend URL (opsional)</label>
+          <input id="backendInput" type="text" placeholder="https://tiktok-chat-reader.zerody.one/">
+        </div>
+      </div>
+      <div class="row">
+        <button id="connectBtn" class="primary">Connect</button>
+        <button id="disconnectBtn" class="secondary" disabled>Disconnect</button>
+        <div id="statusText" class="status">Idle</div>
+        <span id="bgIndicator" class="bg-indicator" style="display:none" title="Tab tersembunyi — connection tetap berjalan">● background</span>
+      </div>
+      <div class="row small">
+        <span class="note">Tip: jika tersedia, nama tampilan TikTok akan ditampilkan. Data disimpan di browser, jadi tidak hilang saat refresh.</span>
+      </div>
+      <div id="roomStats" class="stats">Viewers: 0 | Likes: 0 | Coins: 0</div>
+    </section>
+
+    <main class="grid">
+      <section class="card panel">
+        <div class="panel-header">
+          <div>
+            <h2>Antrean</h2>
+          </div>
+          <div class="joki-panel-header-actions">
+            <button id="exportJokiBtn" class="ghost icon-btn" title="Export (TXT / JSON) dengan filter">Export ▾</button>
+            <button id="importJokiBtn" class="ghost icon-btn" title="Import dari file JSON">Import</button>
+            <input id="importJokiInput" type="file" accept="application/json" style="display:none">
+            <button id="copyJokiBtn" class="ghost icon-btn" title="Salin ke clipboard">Copy</button>
+            <button id="clearJokiBtn" class="ghost icon-btn" title="Hapus semua antrian">Clear</button>
+          </div>
+        </div>
+        <div id="jokiList" class="list joki-list"></div>
+        <div class="panel-footer">
+          <span id="jokiCount" class="count">0 dalam antrean</span>
+        </div>
+      </section>
+
+      <section class="card panel">
+        <div class="panel-header">
+          <div>
+            <h2>Gifts</h2>
+            <p class="panel-sub">Gift terbaru dari LIVE. Toggle Follow untuk auto-scroll.</p>
+          </div>
+          <div class="joki-panel-header-actions">
+            <button id="giftFollowBtn" class="ghost icon-btn" title="Auto-scroll ke gift baru">Follow: Off</button>
+            <button id="clearGiftsBtn" class="ghost">Clear</button>
+          </div>
+        </div>
+        <div id="giftList" class="list gift-list"></div>
+      </section>
+
+      <section class="card panel">
+        <div class="panel-header">
+          <div>
+            <h2>Live Chat</h2>
+            <p class="panel-sub">Pesan chat terbaru dari LIVE. Toggle Follow untuk auto-scroll.</p>
+          </div>
+          <div class="joki-panel-header-actions">
+            <button id="chatFollowBtn" class="ghost icon-btn" title="Auto-scroll ke pesan baru">Follow: Off</button>
+            <button id="clearChatBtn" class="ghost">Clear + Reset</button>
+          </div>
+        </div>
+        <div id="chatList" class="list chat-list"></div>
+      </section>
+
+      <section class="card panel">
+        <div class="panel-header">
+          <div>
+            <h2>Sesi Angka (Chat)</h2>
+            <p class="panel-sub">Ambil angka dari chat setelah Clear. Satu user hanya boleh 1 angka.</p>
+          </div>
+          <button id="resetSessionBtn" class="ghost">Reset</button>
+        </div>
+        <div class="row wrap">
+          <div class="field tiny">
+            <label for="numberMin">Min</label>
+            <input id="numberMin" type="number" min="1" step="1">
+          </div>
+          <div class="field tiny">
+            <label for="numberMax">Max</label>
+            <input id="numberMax" type="number" min="1" step="1">
+          </div>
+        </div>
+        <div id="sessionList" class="list session-list"></div>
+        <div class="panel-footer">
+          <span id="sessionCount" class="count">0 angka</span>
+        </div>
+      </section>
+
+      <section class="card panel">
+        <div class="panel-header">
+          <div>
+            <h2>Spinner</h2>
+            <p class="panel-sub">Spin memilih angka dari sesi chat terbaru.</p>
+          </div>
+        </div>
+        <div class="spinner-wrap">
+          <div class="wheel-frame">
+            <canvas id="wheel" width="320" height="320"></canvas>
+            <div class="pointer"></div>
+          </div>
+        </div>
+        <div class="row wrap">
+          <button id="spinBtn" class="primary">Spin</button>
+          <label class="toggle">
+            <input id="removeAfterSpin" type="checkbox" checked>
+            <span>Hapus pemenang dari sesi angka</span>
+          </label>
+        </div>
+        <div id="winnerDisplay" class="winner-display">Belum ada pemenang</div>
+      </section>
+
+      <section class="card panel">
+        <div class="panel-header">
+          <div>
+            <h2>Gift Rules</h2>
+            <p class="panel-sub">Gift rule memicu Joki otomatis berdasarkan jumlah coin atau nama gift.</p>
+          </div>
+          <div class="joki-panel-header-actions">
+            <button id="exportRulesBtn" class="ghost icon-btn" title="Export rules ke JSON">Export JSON</button>
+            <button id="resetRulesBtn" class="ghost icon-btn" title="Kembalikan ke rules default">Reset Default</button>
+          </div>
+        </div>
+        <div class="rule-form">
+          <div class="field tiny">
+            <label for="ruleType">Tipe</label>
+            <select id="ruleType" onchange="updateGiftSelector()">
+              <option value="diamond">Coin</option>
+              <option value="name">Nama Gift</option>
+            </select>
+          </div>
+          <div class="field small" id="diamondField">
+            <label for="ruleDiamondValue">Jumlah Coin</label>
+            <input id="ruleDiamondValue" type="number" min="1" placeholder="contoh: 1, 5, 10">
+          </div>
+          <div class="field small" id="giftField" style="display:none;">
+            <label for="ruleGiftValue">Pilih Gift</label>
+            <select id="ruleGiftValue">
+              <option value="">-- Pilih Gift --</option>
+            </select>
+          </div>
+          <div class="field small">
+            <label for="ruleAction">Aksi / Joki Type</label>
+            <input id="ruleAction" type="text" placeholder="contoh: Joki Celestial">
+          </div>
+          <button id="addRuleBtn" class="primary">Tambah Rule</button>
+        </div>
+        <div id="ruleList" class="list rule-list"></div>
+      </section>
+
+      <section class="card panel">
+        <div class="panel-header">
+          <div>
+            <h2>Winners</h2>
+            <p class="panel-sub">Riwayat pemenang dari hasil spin.</p>
+          </div>
+          <button id="exportWinnersBtn" class="ghost">Export JSON</button>
+        </div>
+        <div id="winnerList" class="list winner-list"></div>
+        <div class="panel-footer">
+          <span id="winnerCount" class="count">0 pemenang</span>
+          <button id="clearWinnersBtn" class="ghost">Clear</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Toast notification -->
+  <div id="toast" class="toast"></div>
+
+  <!-- Custom Confirm Modal -->
+  <div id="confirmModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="confirmTitle">Konfirmasi</h3>
+      </div>
+      <div class="modal-body">
+        <p id="confirmMessage"></p>
+      </div>
+      <div class="modal-footer">
+        <button class="secondary" id="confirmCancelBtn">Batal</button>
+        <button class="primary" id="confirmOkBtn">Ya</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Export Modal (TXT / JSON dengan filter) -->
+  <div id="exportModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Export Antrean</h3>
+      </div>
+      <div class="modal-body">
+        <p class="modal-hint">Pilih format dan data yang ingin di-export:</p>
+
+        <div class="export-section">
+          <span class="export-section-label">Format</span>
+          <div class="export-format-options">
+            <label class="export-filter-option">
+              <input type="radio" name="exportFormat" value="txt" checked>
+              <span class="export-filter-label">
+                <strong>TXT (Notepad)</strong>
+                <small>Format teks rapi, mudah dibaca di notepad</small>
+              </span>
+            </label>
+            <label class="export-filter-option">
+              <input type="radio" name="exportFormat" value="json">
+              <span class="export-filter-label">
+                <strong>JSON (Backup)</strong>
+                <small>Format data lengkap, untuk backup / restore</small>
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <div class="export-section">
+          <span class="export-section-label">Filter Data</span>
+          <div class="export-filter-options">
+            <label class="export-filter-option">
+              <input type="radio" name="exportFilter" value="all" checked>
+              <span class="export-filter-label">
+                <strong>Semua</strong>
+                <small>Semua entri (menunggu, proses, belum dikirim, selesai)</small>
+              </span>
+            </label>
+            <label class="export-filter-option">
+              <input type="radio" name="exportFilter" value="active">
+              <span class="export-filter-label">
+                <strong>Aktif</strong>
+                <small>Menunggu, proses & belum dikirim</small>
+              </span>
+            </label>
+            <label class="export-filter-option">
+              <input type="radio" name="exportFilter" value="pending">
+              <span class="export-filter-label">
+                <strong>Menunggu</strong>
+                <small>Hanya yang belum diproses</small>
+              </span>
+            </label>
+            <label class="export-filter-option">
+              <input type="radio" name="exportFilter" value="awaitingDelivery">
+              <span class="export-filter-label">
+                <strong>Belum Dikirim</strong>
+                <small>Proses selesai, belum di-deliver</small>
+              </span>
+            </label>
+            <label class="export-filter-option">
+              <input type="radio" name="exportFilter" value="done">
+              <span class="export-filter-label">
+                <strong>Selesai</strong>
+                <small>Hanya yang sudah ditutup</small>
+              </span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="secondary" id="exportCancelBtn">Batal</button>
+        <button class="primary" id="exportOkBtn">Export</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Import Modal -->
+  <div id="importModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Import Antrean dari JSON</h3>
+      </div>
+      <div class="modal-body">
+        <p class="modal-hint">Pilih file JSON hasil export sebelumnya.</p>
+        <div class="export-filter-options">
+          <label class="export-filter-option">
+            <input type="radio" name="importMode" value="merge" checked>
+            <span class="export-filter-label">
+              <strong>Gabung (Merge)</strong>
+              <small>Entry dari file ditambahkan ke antrean saat ini</small>
+            </span>
+          </label>
+          <label class="export-filter-option">
+            <input type="radio" name="importMode" value="replace">
+            <span class="export-filter-label">
+              <strong>Ganti (Replace)</strong>
+              <small>Antrean saat ini dihapus, diganti dengan data dari file</small>
+            </span>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="secondary" id="importCancelBtn">Batal</button>
+        <button class="primary" id="importOkBtn">Pilih File...</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Edit Username -->
+  <div id="editUsernameModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Edit Username Roblox</h3>
+        <button class="close" onclick="closeEditUsernameModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input id="editUsernameInput" type="text" placeholder="Masukkan username Roblox" class="modal-input">
+      </div>
+      <div class="modal-footer">
+        <button class="secondary" onclick="closeEditUsernameModal()">Batal</button>
+        <button class="primary" onclick="confirmEditUsername()">Simpan</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

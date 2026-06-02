@@ -1,0 +1,2106 @@
+const STORAGE_KEY = "tiktok_live_tool_state_v1";
+const MAX_CHAT_ITEMS = 200;
+const MAX_GIFT_ITEMS = 120;
+const MAX_SESSION_ITEMS = 300;
+const MAX_JOKI_ITEMS = 200;
+const WHEEL_COLORS = [
+  "#ffb703",
+  "#0f9d92",
+  "#ff6b35",
+  "#ffd166",
+  "#2ec4b6",
+  "#ff9f1c",
+  "#8ecae6",
+  "#fb5607"
+];
+
+const DEFAULT_GIFT_RULES = [
+  { id: "rule-name-heartme", matchType: "name", matchValue: "heart me", action: "1x kick celestial" },
+  { id: "rule-name-rose", matchType: "name", matchValue: "rose", action: "1x kick random" },
+  { id: "rule-equiv-1", matchType: "diamond", matchValue: 1, action: "1x kick random" },
+  { id: "rule-name-fingerheart", matchType: "name", matchValue: "finger heart", action: "max in lvl BR + bonus" },
+  { id: "rule-equiv-5", matchType: "diamond", matchValue: 5, action: "max in lvl BR + bonus" },
+  { id: "rule-name-superpopular", matchType: "name", matchValue: "super popular", action: "3 celestial lvl max" },
+  { id: "rule-equiv-9", matchType: "diamond", matchValue: 9, action: "3 celestial lvl max" },
+  { id: "rule-equiv-30", matchType: "diamond", matchValue: 30, action: "bacon meowl lvl max + bonus" },
+  { id: "rule-default", matchType: "any", matchValue: "*", action: "1x kick", locked: true }
+];
+
+const POPULAR_GIFTS = [
+  { name: "Heart Me", id: "heartme", value: "heart me" },
+  { name: "Rose", id: "rose", value: "rose" },
+  { name: "Finger Heart", id: "fingerheart", value: "finger heart" },
+  { name: "Super Popular", id: "superpopular", value: "super popular" },
+  { name: "Doughnut", id: "doughnut", value: "doughnut" },
+  { name: "Panda", id: "panda", value: "panda" },
+  { name: "Corgi", id: "corgi", value: "corgi" },
+  { name: "Butterfly", id: "butterfly", value: "butterfly" },
+  { name: "Galaxy", id: "galaxy", value: "galaxy" },
+  { name: "Kpop", id: "kpop", value: "kpop" },
+  { name: "Sunflower", id: "sunflower", value: "sunflower" },
+  { name: "Ramen", id: "ramen", value: "ramen" },
+  { name: "Orange", id: "orange", value: "orange" },
+  { name: "Fireworks", id: "fireworks", value: "fireworks" },
+  { name: "Gift Box", id: "giftbox", value: "gift box" },
+  { name: "Cheer Me Up", id: "cheer", value: "cheer me up" }
+];
+
+const state = {
+  sessionNumbers: [],
+  winners: [],
+  jokiQueue: [],
+  giftRules: [],
+  settings: {
+    autoAddFromChat: false,
+    removeAfterSpin: true,
+    numberMin: 1,
+    numberMax: 200
+  },
+  nextNumber: 1,
+  lastUsername: "",
+  backendUrl: ""
+};
+
+let connection = null;
+let activeBackendUrl = null;
+let currentRotation = 0;
+let spinning = false;
+let viewerCount = 0;
+let likeCount = 0;
+let diamondsCount = 0;
+let sessionUserMap = new Map();
+let sessionNumberMap = new Map();
+let editingEntryId = null;
+
+const el = {};
+
+class TikTokIOConnection {
+  constructor(backendUrl) {
+    this.socket = io(backendUrl, { transports: ["websocket", "polling"] });
+    this.uniqueId = null;
+    this.options = null;
+
+    this.socket.on("connect", () => {
+      if (this.uniqueId) {
+        this.socket.emit("setUniqueId", this.uniqueId, this.options || {});
+      }
+    });
+
+    this.socket.on("tiktokDisconnected", (errMsg) => {
+      if (errMsg && errMsg.includes("LIVE has ended")) {
+        this.uniqueId = null;
+      }
+    });
+  }
+
+  connect(uniqueId, options) {
+    this.uniqueId = uniqueId;
+    this.options = options || {};
+
+    this.socket.off("tiktokConnected");
+    this.socket.off("tiktokDisconnected");
+
+    this.socket.emit("setUniqueId", this.uniqueId, this.options);
+
+    return new Promise((resolve, reject) => {
+      this.socket.once("tiktokConnected", resolve);
+      this.socket.once("tiktokDisconnected", reject);
+
+      setTimeout(() => reject("Connection Timeout"), 15000);
+    });
+  }
+
+  disconnect() {
+    this.uniqueId = null;
+    this.socket.emit("disconnect_tiktok");
+  }
+
+  destroy() {
+    this.socket.disconnect();
+  }
+
+  on(eventName, handler) {
+    this.socket.on(eventName, handler);
+  }
+}
+
+function $(id) {
+  return document.getElementById(id);
+}
+
+function escapeHtml(text) {
+  return String(text || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function normalizeKey(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function generateId(prefix) {
+  const seed = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+  return prefix ? `${prefix}-${seed}` : seed;
+}
+
+function rebuildSessionIndexes() {
+  sessionUserMap = new Map();
+  sessionNumberMap = new Map();
+  state.sessionNumbers.forEach((entry) => {
+    if (entry && typeof entry.number === "number" && entry.userKey) {
+      sessionUserMap.set(entry.userKey, entry.number);
+      sessionNumberMap.set(entry.number, entry);
+    }
+  });
+}
+
+function extractNumber(comment) {
+  const match = String(comment || "").match(/\b(\d{1,4})\b/);
+  if (!match) return null;
+  const value = Number(match[1]);
+  return Number.isFinite(value) ? value : null;
+}
+
+function formatTime(ts) {
+  const date = new Date(ts);
+  return date.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+}
+
+const JOKI_STATUS_LABEL = {
+  pending: "Menunggu",
+  inProgress: "Proses",
+  awaitingDelivery: "Belum Dikirim",
+  done: "Selesai"
+};
+
+const JOKI_STATUS_ORDER = ["pending", "inProgress", "awaitingDelivery", "done"];
+
+let toastTimer = null;
+let chatFollowEnabled = false;
+let giftFollowEnabled = false;
+let confirmCallback = null;
+function showToast(message, type) {
+  const toast = $("toast");
+  if (!toast) return;
+  toast.textContent = message;
+  toast.className = "toast show" + (type ? " " + type : "");
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    toast.className = "toast";
+  }, 2200);
+}
+
+function showConfirm(title, message, onConfirm, okLabel) {
+  $("confirmTitle").textContent = title;
+  $("confirmMessage").textContent = message;
+  $("confirmOkBtn").textContent = okLabel || "Ya, Lanjut";
+  $("confirmModal").style.display = "flex";
+  confirmCallback = onConfirm;
+}
+
+function closeConfirm() {
+  $("confirmModal").style.display = "none";
+  confirmCallback = null;
+}
+
+function getRawDisplayName(msg) {
+  if (!msg) return "unknown";
+  return (msg.displayName || msg.nickname || msg.uniqueId || "unknown").trim();
+}
+
+function getDisplayLabel(msg) {
+  const raw = getRawDisplayName(msg);
+  const uniqueId = msg && msg.uniqueId ? msg.uniqueId.trim() : "";
+  if (uniqueId && raw && raw.toLowerCase() !== uniqueId.toLowerCase()) {
+    const label = raw.startsWith("@") ? raw : raw;
+    return `${label} (@${uniqueId})`;
+  }
+  return raw.startsWith("@") ? raw : `@${raw}`;
+}
+
+function downloadJSON(data, filename) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function setJokiStatus(id, status) {
+  const entry = state.jokiQueue.find((item) => item.id === id);
+  if (!entry) return;
+  entry.status = status;
+  saveState();
+  renderJokiQueue();
+}
+
+function cycleJokiStatus(id) {
+  const entry = state.jokiQueue.find((item) => item.id === id);
+  if (!entry) return;
+  const idx = JOKI_STATUS_ORDER.indexOf(entry.status);
+  const nextIdx = idx === -1 ? 0 : (idx + 1) % JOKI_STATUS_ORDER.length;
+  entry.status = JOKI_STATUS_ORDER[nextIdx];
+  saveState();
+  renderJokiQueue();
+}
+
+function getJokiStatusClass(status) {
+  if (JOKI_STATUS_ORDER.includes(status)) return status;
+  return "pending";
+}
+
+function saveState() {
+  const payload = {
+    sessionNumbers: state.sessionNumbers,
+    winners: state.winners,
+    jokiQueue: state.jokiQueue,
+    giftRules: state.giftRules,
+    settings: state.settings,
+    nextNumber: state.nextNumber,
+    lastUsername: state.lastUsername,
+    backendUrl: state.backendUrl
+  };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+}
+
+function loadState() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return;
+
+  try {
+    const parsed = JSON.parse(raw);
+    state.sessionNumbers = Array.isArray(parsed.sessionNumbers) ? parsed.sessionNumbers : [];
+    state.winners = Array.isArray(parsed.winners) ? parsed.winners : [];
+    state.jokiQueue = Array.isArray(parsed.jokiQueue) ? parsed.jokiQueue : [];
+    
+    // Migrate old whitelist data to jokiQueue
+    if (Array.isArray(parsed.whitelist) && parsed.whitelist.length > 0) {
+      const migratedEntries = parsed.whitelist.map((item) => ({
+        id: generateId("joki"),
+        action: "Manual",
+        user: item.name || item.key,
+        username: item.username || null,
+        giftName: "-",
+        diamondCount: 0,
+        qty: 1,
+        time: item.addedAt || Date.now(),
+        status: "pending",
+        source: "migrated"
+      }));
+      state.jokiQueue = [...migratedEntries, ...state.jokiQueue];
+    }
+    
+    state.jokiQueue = state.jokiQueue.map((entry) => {
+      const normalized = { ...entry, status: entry.status || "pending" };
+      normalized.notes = typeof entry.notes === "string" ? entry.notes : "";
+      normalized.tiktokId = entry.tiktokId || null;
+      if (entry.source === "gift" && entry.username && !normalized.tiktokId) {
+        normalized.tiktokId = entry.username;
+        normalized.username = null;
+      }
+      if (entry.source !== "gift" && !normalized.tiktokId) {
+        normalized.tiktokId = null;
+      }
+      if (normalized.status === "classDone") {
+        normalized.status = "inProgress";
+      }
+      if (JOKI_STATUS_ORDER.indexOf(normalized.status) === -1) {
+        normalized.status = "pending";
+      }
+      return normalized;
+    });
+    state.giftRules = Array.isArray(parsed.giftRules) && parsed.giftRules.length
+      ? parsed.giftRules
+      : DEFAULT_GIFT_RULES.slice();
+
+    const OLD_DEFAULT_RULE_IDS = [
+      "rule-diamond-1",
+      "rule-name-orange",
+      "rule-diamond-5",
+      "rule-diamond-10",
+      "rule-name-doughnut",
+      "rule-diamond-30"
+    ];
+    const hasOldDefault = state.giftRules.some((r) => OLD_DEFAULT_RULE_IDS.includes(r.id));
+    if (hasOldDefault) {
+      state.giftRules = DEFAULT_GIFT_RULES.slice();
+    } else {
+      const userRuleIds = new Set(state.giftRules.map((r) => r.id));
+      const missingDefaults = DEFAULT_GIFT_RULES.filter((r) => !userRuleIds.has(r.id));
+      if (missingDefaults.length > 0) {
+        state.giftRules = [...state.giftRules, ...missingDefaults];
+      }
+    }
+
+    const criticalRuleIds = ["rule-equiv-1", "rule-equiv-5", "rule-equiv-9", "rule-equiv-30"];
+    const existingIds = new Set(state.giftRules.map((r) => r.id));
+    let rulesInjected = false;
+    criticalRuleIds.forEach((id) => {
+      if (!existingIds.has(id)) {
+        const def = DEFAULT_GIFT_RULES.find((r) => r.id === id);
+        if (def) {
+          state.giftRules.push({ ...def });
+          rulesInjected = true;
+        }
+      }
+    });
+    if (!existingIds.has("rule-default")) {
+      const def = DEFAULT_GIFT_RULES.find((r) => r.id === "rule-default");
+      if (def) {
+        state.giftRules.push({ ...def });
+        rulesInjected = true;
+      }
+    } else {
+      const defRule = state.giftRules.find((r) => r.id === "rule-default");
+      if (defRule && !defRule.locked) {
+        defRule.locked = true;
+        rulesInjected = true;
+      }
+    }
+    if (rulesInjected) saveState();
+    state.settings = Object.assign(state.settings, parsed.settings || {});
+    state.nextNumber = typeof parsed.nextNumber === "number" ? parsed.nextNumber : state.nextNumber;
+    state.lastUsername = parsed.lastUsername || "";
+    state.backendUrl = parsed.backendUrl || "";
+  } catch (err) {
+    console.warn("Failed to parse saved state", err);
+    state.giftRules = DEFAULT_GIFT_RULES.slice();
+  }
+}
+
+function updateCounts() {
+  el.winnerCount.textContent = `${state.winners.length} pemenang`;
+  el.sessionCount.textContent = `${state.sessionNumbers.length} angka`;
+  const activeJoki = state.jokiQueue.filter((e) => e.status !== "done").length;
+  const totalJoki = state.jokiQueue.length;
+  el.jokiCount.textContent = activeJoki === totalJoki
+    ? `${totalJoki} dalam antrean`
+    : `${activeJoki} aktif • ${totalJoki - activeJoki} selesai`;
+}
+
+function setStatus(message, type) {
+  el.statusText.textContent = message;
+  if (type === "error") {
+    el.statusText.style.color = "#b45309";
+  } else {
+    el.statusText.style.color = "";
+  }
+}
+
+function setConnectionState(stateName) {
+  if (stateName === "connected") {
+    el.connectBtn.disabled = true;
+    el.disconnectBtn.disabled = false;
+  } else if (stateName === "connecting") {
+    el.connectBtn.disabled = true;
+    el.disconnectBtn.disabled = true;
+  } else {
+    el.connectBtn.disabled = false;
+    el.disconnectBtn.disabled = true;
+  }
+}
+
+function resolveBackendUrl() {
+  const custom = el.backendInput.value.trim();
+  if (custom) return custom;
+  if (location.protocol === "file:") return "https://tiktok-chat-reader.zerody.one/";
+  return undefined;
+}
+
+function ensureConnection() {
+  const backendUrl = resolveBackendUrl();
+  if (connection && backendUrl === activeBackendUrl) return;
+
+  if (connection) {
+    connection.destroy();
+  }
+
+  connection = new TikTokIOConnection(backendUrl);
+  activeBackendUrl = backendUrl;
+  attachConnectionHandlers(connection);
+}
+
+function attachConnectionHandlers(conn) {
+  conn.on("chat", (msg) => {
+    const sessionEntry = tryRegisterChatNumber(msg);
+    addChatItem(msg, sessionEntry);
+  });
+
+  conn.on("gift", (msg) => {
+    addGiftItem(msg);
+    processGiftRules(msg);
+    maybeNotifyGiftBackground(msg);
+  });
+
+  conn.on("roomUser", (msg) => {
+    if (typeof msg.viewerCount === "number") {
+      viewerCount = msg.viewerCount;
+      updateStats();
+    }
+  });
+
+  conn.on("like", (msg) => {
+    if (typeof msg.totalLikeCount === "number") {
+      likeCount = msg.totalLikeCount;
+      updateStats();
+    }
+  });
+
+  conn.on("tiktokDisconnected", (errMsg) => {
+    if (errMsg) {
+      setStatus(errMsg, "error");
+    }
+    setConnectionState("idle");
+  });
+
+  conn.on("streamEnd", () => {
+    setStatus("LIVE selesai. Menunggu reconnect...", "error");
+    setConnectionState("idle");
+  });
+}
+
+function updateStats() {
+  el.roomStats.textContent = `Viewers: ${viewerCount.toLocaleString("id-ID")} | Likes: ${likeCount.toLocaleString("id-ID")} | Coins: ${diamondsCount.toLocaleString("id-ID")} 🪙`;
+}
+
+function normalizeNumberRange() {
+  let min = Number(el.numberMin.value) || 1;
+  let max = Number(el.numberMax.value) || 200;
+
+  if (min > max) {
+    const temp = min;
+    min = max;
+    max = temp;
+  }
+
+  state.settings.numberMin = min;
+  state.settings.numberMax = max;
+  el.numberMin.value = min;
+  el.numberMax.value = max;
+
+  saveState();
+}
+
+function connectLive() {
+  const username = el.usernameInput.value.trim().replace(/^@/, "");
+  if (!username) {
+    showToast("Masukkan username TikTok terlebih dahulu.", "error");
+    return;
+  }
+
+  if ("Notification" in window && Notification.permission === "default") {
+    Notification.requestPermission().catch(() => {});
+  }
+
+  ensureConnection();
+
+  setStatus("Connecting...");
+  setConnectionState("connecting");
+
+  state.lastUsername = username;
+  state.backendUrl = el.backendInput.value.trim();
+  saveState();
+
+  connection
+    .connect(username, {})
+    .then(() => {
+      setStatus("Connected");
+      setConnectionState("connected");
+      state._wasConnectedBeforeHide = true;
+      viewerCount = 0;
+      likeCount = 0;
+      diamondsCount = 0;
+      updateStats();
+      tryRequestWakeLock();
+    })
+    .catch((errMsg) => {
+      setStatus(String(errMsg || "Gagal connect"), "error");
+      setConnectionState("idle");
+    });
+}
+
+function disconnectLive() {
+  if (connection) {
+    connection.disconnect();
+  }
+  setStatus("Disconnected", "error");
+  setConnectionState("idle");
+  releaseWakeLock();
+}
+
+let wakeLock = null;
+async function tryRequestWakeLock() {
+  if (!("wakeLock" in navigator)) return;
+  try {
+    wakeLock = await navigator.wakeLock.request("screen");
+  } catch (err) {
+  }
+}
+
+function releaseWakeLock() {
+  if (wakeLock) {
+    wakeLock.release().catch(() => {});
+    wakeLock = null;
+  }
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    if (el.bgIndicator) el.bgIndicator.style.display = "inline-flex";
+    tryRequestWakeLock();
+  } else {
+    if (el.bgIndicator) el.bgIndicator.style.display = "none";
+    if (state.lastUsername && el.statusText && el.statusText.textContent !== "Connected") {
+      const wasConnected = state._wasConnectedBeforeHide;
+      if (!wasConnected) {
+        setStatus("Tab aktif — reconnecting...", "error");
+        connectLive();
+      }
+    }
+  }
+});
+
+window.addEventListener("focus", () => {
+  try {
+    if (state.lastUsername && connection && connection.isConnected === false) {
+      setStatus("Tab aktif — reconnecting...", "error");
+      connectLive();
+    }
+  } catch (err) {
+  }
+});
+
+function maybeNotifyGiftBackground(msg) {
+  if (!document.hidden) return;
+  if (!("Notification" in window)) return;
+  if (Notification.permission !== "granted") return;
+  const user = (msg && msg.uniqueId) ? `@${msg.uniqueId}` : "Seseorang";
+  const gift = msg && msg.giftName ? msg.giftName : "gift";
+  const total = msg && msg.diamondCount ? ` • ${msg.diamondCount}🪙` : "";
+  try {
+    new Notification(`Gift dari ${user}`, {
+      body: `mengirim ${gift}${total}`,
+      tag: "tiktok-gift",
+      silent: false
+    });
+  } catch (e) {
+  }
+}
+
+function tryRegisterChatNumber(msg) {
+  const number = extractNumber(msg.comment);
+  if (!number) return null;
+
+  const min = Number(state.settings.numberMin) || 1;
+  const max = Number(state.settings.numberMax) || 9999;
+  if (number < min || number > max) return null;
+
+  const userKey = normalizeKey(msg.uniqueId);
+  if (!userKey) return null;
+
+  if (sessionUserMap.has(userKey)) return null;
+  if (sessionNumberMap.has(number)) return null;
+
+  const entry = {
+    number,
+    userKey,
+    name: getDisplayLabel(msg),
+    comment: msg.comment || "",
+    time: Date.now()
+  };
+
+  state.sessionNumbers.push(entry);
+  if (state.sessionNumbers.length > MAX_SESSION_ITEMS) {
+    const removed = state.sessionNumbers.shift();
+    if (removed) {
+      sessionUserMap.delete(removed.userKey);
+      sessionNumberMap.delete(removed.number);
+    }
+  }
+
+  sessionUserMap.set(userKey, number);
+  sessionNumberMap.set(number, entry);
+
+  saveState();
+  renderSessionNumbers();
+  drawWheel();
+
+  return entry;
+}
+
+function addChatItem(msg, sessionEntry) {
+  const item = document.createElement("div");
+  item.className = "list-item";
+
+  const avatar = document.createElement("div");
+  avatar.className = "avatar";
+  const img = document.createElement("img");
+  img.src = msg.profilePictureUrl || "";
+  img.alt = "";
+  avatar.appendChild(img);
+
+  const content = document.createElement("div");
+  content.className = "item-content";
+
+  const title = document.createElement("div");
+  title.className = "item-title";
+  title.textContent = getDisplayLabel(msg);
+
+  const rawDisplayName = getRawDisplayName(msg);
+  if (msg.uniqueId && rawDisplayName.toLowerCase() !== msg.uniqueId.toLowerCase()) {
+    const subtitle = document.createElement("div");
+    subtitle.className = "item-sub";
+    subtitle.textContent = `@${msg.uniqueId}`;
+    content.appendChild(subtitle);
+  }
+
+  const text = document.createElement("div");
+  text.className = "item-text";
+  text.textContent = msg.comment || "";
+
+  const meta = document.createElement("div");
+  meta.className = "item-meta";
+  meta.textContent = formatTime(Date.now());
+
+  content.appendChild(title);
+  content.appendChild(text);
+  content.appendChild(meta);
+
+  const addBtn = document.createElement("button");
+  addBtn.className = "ghost small";
+  addBtn.textContent = "Add";
+  addBtn.addEventListener("click", () => addToWhitelistFromUser(msg));
+
+  item.appendChild(avatar);
+  item.appendChild(content);
+
+  if (sessionEntry) {
+    const numberBadge = document.createElement("div");
+    numberBadge.className = "pill";
+    numberBadge.textContent = `#${sessionEntry.number}`;
+    item.appendChild(numberBadge);
+  }
+
+  item.appendChild(addBtn);
+
+  el.chatList.appendChild(item);
+  appendWithAutoScroll(el.chatList, chatFollowEnabled);
+  trimList(el.chatList, MAX_CHAT_ITEMS);
+}
+
+function addGiftItem(msg) {
+  const item = document.createElement("div");
+  item.className = "list-item gift-item";
+
+  const content = document.createElement("div");
+  content.className = "item-content";
+
+  const title = document.createElement("div");
+  title.className = "item-title";
+  const giftName = msg.giftName || "gift";
+  title.textContent = giftName;
+
+  const text = document.createElement("div");
+  text.className = "item-text";
+  const parts = [];
+  parts.push(getDisplayLabel(msg));
+  if (msg.repeatCount) parts.push(`x${msg.repeatCount}`);
+  if (msg.diamondCount) parts.push(`${msg.diamondCount}🪙`);
+  text.textContent = parts.join(" • ");
+
+  content.appendChild(title);
+  content.appendChild(text);
+
+  const meta = document.createElement("div");
+  meta.className = "item-meta";
+  meta.textContent = formatTime(Date.now());
+
+  item.appendChild(content);
+  item.appendChild(meta);
+
+  el.giftList.appendChild(item);
+  appendWithAutoScroll(el.giftList, giftFollowEnabled);
+  trimList(el.giftList, MAX_GIFT_ITEMS);
+
+  const pendingStreak = msg.giftType === 1 && !msg.repeatEnd;
+  if (!pendingStreak && msg.diamondCount) {
+    diamondsCount += msg.diamondCount * (msg.repeatCount || 1);
+    updateStats();
+  }
+}
+
+function renderSessionNumbers() {
+  el.sessionList.innerHTML = "";
+
+  state.sessionNumbers
+    .slice()
+    .sort((a, b) => a.number - b.number)
+    .forEach((entry) => {
+      const row = document.createElement("div");
+      row.className = "list-item";
+
+      const pill = document.createElement("div");
+      pill.className = "pill";
+      pill.textContent = `#${entry.number}`;
+
+      const content = document.createElement("div");
+      content.className = "item-content";
+
+      const title = document.createElement("div");
+      title.className = "item-title";
+      title.textContent = entry.name;
+
+      const text = document.createElement("div");
+      text.className = "item-text";
+      text.textContent = entry.comment;
+
+      const meta = document.createElement("div");
+      meta.className = "item-meta";
+      meta.textContent = formatTime(entry.time);
+
+      content.appendChild(title);
+      content.appendChild(text);
+      content.appendChild(meta);
+
+      row.appendChild(pill);
+      row.appendChild(content);
+
+      el.sessionList.appendChild(row);
+    });
+
+  updateCounts();
+}
+
+function resetSessionNumbers() {
+  state.sessionNumbers = [];
+  sessionUserMap.clear();
+  sessionNumberMap.clear();
+  saveState();
+  renderSessionNumbers();
+  drawWheel();
+  el.winnerDisplay.textContent = "Belum ada pemenang";
+}
+
+function removeSessionNumber(number) {
+  state.sessionNumbers = state.sessionNumbers.filter((entry) => entry.number !== number);
+  rebuildSessionIndexes();
+  saveState();
+  renderSessionNumbers();
+  drawWheel();
+}
+
+function processGiftRules(msg) {
+  const pendingStreak = msg.giftType === 1 && !msg.repeatEnd;
+  if (pendingStreak) return;
+
+  const giftName = normalizeKey(msg.giftName);
+  const diamondCount = Number(msg.diamondCount || 0);
+
+  const checkRule = (rule) => {
+    if (rule.matchType === "diamond") {
+      return Number(rule.matchValue) === diamondCount;
+    }
+    if (rule.matchType === "name") {
+      return giftName.includes(normalizeKey(rule.matchValue));
+    }
+    if (rule.matchType === "any") {
+      return true;
+    }
+    return false;
+  };
+
+  const fireRule = (rule, options) => {
+    addJokiQueueEntry({
+      action: rule.action,
+      user: getDisplayLabel(msg),
+      username: null,
+      tiktokId: msg.uniqueId || null,
+      giftName: msg.giftName || "gift",
+      diamondCount,
+      qty: msg.repeatCount || 1,
+      source: "gift",
+      unmatched: !!(options && options.unmatched)
+    });
+  };
+
+  const nameRules = state.giftRules.filter((r) => r.matchType === "name");
+  for (const rule of nameRules) {
+    if (checkRule(rule)) {
+      fireRule(rule);
+      return;
+    }
+  }
+
+  const diamondRules = state.giftRules.filter((r) => r.matchType === "diamond");
+  for (const rule of diamondRules) {
+    if (checkRule(rule)) {
+      fireRule(rule);
+      return;
+    }
+  }
+
+  const anyRule = state.giftRules.find((r) => r.matchType === "any");
+  if (anyRule) {
+    fireRule(anyRule, { unmatched: true });
+    const userLabel = msg.uniqueId ? `@${msg.uniqueId}` : (msg.nickname || "viewer");
+    showToast(
+      `ℹ ${msg.giftName || "Gift"} dari ${userLabel} pakai rule default (${anyRule.action}). Edit rule untuk ganti aksi.`,
+      "success"
+    );
+    return;
+  }
+
+  const userLabel = msg.uniqueId ? `@${msg.uniqueId}` : (msg.nickname || "viewer");
+  showToast(
+    `⚠ ${msg.giftName || "Gift"} dari ${userLabel} belum ada rule. Tambahkan rule atau edit rule default.`,
+    "error"
+  );
+  if (window.console && console.warn) {
+    console.warn(`[GiftRule] No match for gift="${msg.giftName}" (${diamondCount} coin) from @${msg.uniqueId || "?"}`);
+  }
+}
+
+function addJokiQueueEntry(entry) {
+  if (entry.source === "gift" && entry.tiktokId && entry.action) {
+    const existing = state.jokiQueue.find((item) =>
+      item.source === "gift" &&
+      item.tiktokId === entry.tiktokId &&
+      item.action === entry.action &&
+      item.status === "pending"
+    );
+    if (existing) {
+      const addedQty = Math.max(1, Number(entry.qty) || 1);
+      const addedDiamonds = Number(entry.diamondCount) || 0;
+      existing.qty = (Number(existing.qty) || 1) + addedQty;
+      existing.diamondCount = (Number(existing.diamondCount) || 0) + addedDiamonds;
+      existing.lastAddedAt = Date.now();
+      saveState();
+      renderJokiQueue();
+      showToast(`${entry.user} nambah +${addedQty} (total: ${existing.qty})`, "success");
+      return;
+    }
+  }
+
+  state.jokiQueue.push({
+    id: generateId("joki"),
+    action: entry.action,
+    user: entry.user,
+    username: entry.username || null,
+    tiktokId: entry.tiktokId || null,
+    giftName: entry.giftName || "-",
+    diamondCount: entry.diamondCount || 0,
+    qty: entry.qty || 1,
+    time: Date.now(),
+    status: entry.status || "pending",
+    source: entry.source || "unknown",
+    notes: entry.notes || ""
+  });
+
+  if (state.jokiQueue.length > MAX_JOKI_ITEMS) {
+    state.jokiQueue.shift();
+  }
+
+  saveState();
+  renderJokiQueue();
+}
+
+function renderJokiQueue() {
+  el.jokiList.innerHTML = "";
+
+  if (state.jokiQueue.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.textContent = "Antrean kosong. Tambah manual atau aktifkan gift rule.";
+    el.jokiList.appendChild(empty);
+    updateCounts();
+    return;
+  }
+
+  const sorted = state.jokiQueue
+    .slice()
+    .sort((a, b) => (a.time || 0) - (b.time || 0));
+
+  sorted.forEach((entry) => {
+    const row = document.createElement("div");
+    const statusKey = entry.status || "pending";
+    row.className = `list-item joki-card status-${getJokiStatusClass(statusKey)}`;
+    row.dataset.entryId = entry.id;
+    const tooltipParts = [`Masuk: ${formatTime(entry.time)}`];
+    if (entry.lastAddedAt && entry.lastAddedAt !== entry.time) {
+      tooltipParts.push(`Update: ${formatTime(entry.lastAddedAt)}`);
+    }
+    if (entry.tiktokId) {
+      tooltipParts.push(`@${entry.tiktokId}`);
+    }
+    row.title = tooltipParts.join(" • ");
+
+    const header = document.createElement("div");
+    header.className = "joki-header";
+
+    const statusBadge = document.createElement("span");
+    statusBadge.className = `joki-status ${getJokiStatusClass(statusKey)}`;
+    statusBadge.textContent = JOKI_STATUS_LABEL[statusKey] || JOKI_STATUS_LABEL.pending;
+
+    header.appendChild(statusBadge);
+
+    const body = document.createElement("div");
+    body.className = "joki-body";
+
+    const userLine = document.createElement("div");
+    userLine.className = "joki-line joki-user-line";
+    const displayName = document.createElement("span");
+    displayName.className = "joki-display-name";
+    displayName.textContent = entry.user;
+    userLine.appendChild(displayName);
+    if (entry.tiktokId) {
+      const tiktokIdEl = document.createElement("span");
+      tiktokIdEl.className = "joki-tiktok-id";
+      tiktokIdEl.textContent = `(@${entry.tiktokId})`;
+      userLine.appendChild(tiktokIdEl);
+    }
+    body.appendChild(userLine);
+
+    const infoLine = document.createElement("div");
+    infoLine.className = "joki-line joki-info-line";
+    infoLine.dataset.entryId = entry.id;
+
+    if (entry.giftName && entry.giftName !== "-") {
+      const giftEl = document.createElement("span");
+      giftEl.className = "joki-gift";
+      const diamondLabel = entry.diamondCount ? ` (${entry.diamondCount}🪙)` : "";
+      giftEl.textContent = `${entry.giftName}${diamondLabel}`;
+      infoLine.appendChild(giftEl);
+    }
+
+    const robloxSep = document.createElement("span");
+    robloxSep.className = "joki-sep";
+    robloxSep.textContent = "—";
+    infoLine.appendChild(robloxSep);
+
+    const robloxLabel = document.createElement("span");
+    robloxLabel.className = "joki-roblox-label";
+    robloxLabel.textContent = "Roblox:";
+    infoLine.appendChild(robloxLabel);
+
+    if (entry.username) {
+      const robloxValue = document.createElement("span");
+      robloxValue.className = "joki-roblox-value";
+      robloxValue.textContent = entry.username;
+      robloxValue.title = "Klik untuk edit";
+      robloxValue.addEventListener("click", () => startEditRobloxInline(entry.id, robloxValue));
+      infoLine.appendChild(robloxValue);
+    } else {
+      const addRobloxBtn = document.createElement("span");
+      addRobloxBtn.className = "joki-roblox-value joki-roblox-empty";
+      addRobloxBtn.textContent = "+ tambah";
+      addRobloxBtn.addEventListener("click", () => startEditRobloxInline(entry.id, addRobloxBtn));
+      infoLine.appendChild(addRobloxBtn);
+    }
+
+    body.appendChild(infoLine);
+
+    const notesLine = document.createElement("div");
+    notesLine.className = "joki-line joki-notes-line";
+    const notesLabel = document.createElement("span");
+    notesLabel.className = "joki-notes-label";
+    notesLabel.textContent = "Catatan:";
+    notesLine.appendChild(notesLabel);
+    const notesText = document.createElement("span");
+    notesText.className = "joki-notes-text";
+    notesText.setAttribute("contenteditable", "true");
+    notesText.setAttribute("spellcheck", "false");
+    notesText.setAttribute("data-placeholder", "klik untuk tambah catatan brainrot");
+    notesText.textContent = entry.notes || "";
+    notesText.addEventListener("input", () => {
+      const txt = notesText.textContent || "";
+      const e2 = state.jokiQueue.find((x) => x.id === entry.id);
+      if (e2) e2.notes = txt;
+    });
+    notesText.addEventListener("blur", () => {
+      saveState();
+    });
+    notesText.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        notesText.blur();
+      }
+    });
+    notesLine.appendChild(notesText);
+    body.appendChild(notesLine);
+
+    const actionsWrap = document.createElement("div");
+    actionsWrap.className = "joki-actions";
+
+    const statusBtn = document.createElement("button");
+    if (statusKey === "done") {
+      statusBtn.className = "ghost small";
+      statusBtn.textContent = "Buka Lagi";
+    } else if (statusKey === "awaitingDelivery") {
+      statusBtn.className = "primary-action";
+      statusBtn.textContent = "Tutup Order";
+    } else if (statusKey === "inProgress") {
+      statusBtn.className = "primary-action";
+      statusBtn.textContent = "Belum Dikirim";
+    } else {
+      statusBtn.className = "primary-action";
+      statusBtn.textContent = "Mulai Proses";
+    }
+    statusBtn.addEventListener("click", () => cycleJokiStatus(entry.id));
+
+    const editUsernameBtn = document.createElement("button");
+    editUsernameBtn.className = "ghost small";
+    editUsernameBtn.textContent = "Edit Roblox";
+    editUsernameBtn.addEventListener("click", () => {
+      const target = row.querySelector(".joki-roblox-value") || row.querySelector(".joki-roblox-empty");
+      if (target) startEditRobloxInline(entry.id, target);
+    });
+
+    const removeBtn = document.createElement("button");
+    removeBtn.className = "ghost small danger-action";
+    removeBtn.textContent = "Hapus";
+    removeBtn.addEventListener("click", () => {
+      showConfirm(
+        "Hapus Entri Ini?",
+        `Hapus ${entry.user} dari antrean?`,
+        () => removeJokiEntry(entry.id),
+        "Ya, Hapus"
+      );
+    });
+
+    actionsWrap.appendChild(statusBtn);
+    if (entry.username) {
+      actionsWrap.appendChild(editUsernameBtn);
+    }
+    actionsWrap.appendChild(removeBtn);
+
+    row.appendChild(header);
+    row.appendChild(body);
+    row.appendChild(actionsWrap);
+
+    el.jokiList.appendChild(row);
+  });
+
+  updateCounts();
+}
+
+function formatActionDisplay(action, qty) {
+  if (!action) return "";
+  const matchResult = action.match(/^(\s*)(\d+)\s*x\s+/i);
+  if (matchResult) {
+    return `${matchResult[1]}${qty || 1}x ${action.substring(matchResult[0].length)}`;
+  }
+  if (qty && qty > 1) {
+    return `${qty}x ${action}`;
+  }
+  return action;
+}
+
+function copyToClipboard(text, successMsg) {
+  const onSuccess = () => showToast(successMsg || `Disalin: ${text}`, "success");
+  const onError = () => {
+    if (fallbackCopy(text)) {
+      onSuccess();
+    } else {
+      showToast("Gagal menyalin — coba salin manual", "error");
+    }
+  };
+
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(onSuccess).catch(onError);
+  } else {
+    if (fallbackCopy(text)) {
+      onSuccess();
+    } else {
+      onError();
+    }
+  }
+}
+
+function fallbackCopy(text, successMsg) {
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.setAttribute("readonly", "");
+  ta.style.position = "fixed";
+  ta.style.top = "0";
+  ta.style.left = "0";
+  ta.style.opacity = "0";
+  ta.style.pointerEvents = "none";
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  ta.setSelectionRange(0, text.length);
+  let success = false;
+  try {
+    success = document.execCommand("copy");
+  } catch (e) {
+    success = false;
+  }
+  document.body.removeChild(ta);
+  return success;
+}
+
+function clearJokiQueue() {
+  if (state.jokiQueue.length === 0) {
+    showToast("Antrean sudah kosong", "error");
+    return;
+  }
+  showConfirm(
+    "Hapus Semua Antrean?",
+    `Yakin ingin menghapus ${state.jokiQueue.length} entri dari antrean?`,
+    () => {
+      state.jokiQueue = [];
+      saveState();
+      renderJokiQueue();
+      showToast("Antrean berhasil dikosongkan", "success");
+    },
+    "Ya, Hapus"
+  );
+}
+
+function copyJokiQueueToClipboard() {
+  if (state.jokiQueue.length === 0) {
+    showToast("Antrean kosong, tidak ada yang disalin", "error");
+    return;
+  }
+
+  const lines = ["No\tWaktu\tUser\tAkun\tStatus"];
+  const sorted = state.jokiQueue
+    .slice()
+    .sort((a, b) => (a.time || 0) - (b.time || 0));
+  sorted.forEach((entry, index) => {
+    const waktu = new Date(entry.time).toLocaleString("id-ID");
+    const akun = entry.username || "-";
+    const status = JOKI_STATUS_LABEL[entry.status] || entry.status;
+    lines.push(`${index + 1}\t${waktu}\t${entry.user}\t${akun}\t${status}`);
+  });
+
+  const text = lines.join("\n");
+  copyToClipboard(text, `Disalin: ${sorted.length} entri ke clipboard`);
+}
+
+function openExportModal() {
+  if (state.jokiQueue.length === 0) {
+    showToast("Antrean kosong, tidak ada yang di-export", "error");
+    return;
+  }
+  el.exportModal.style.display = "flex";
+}
+
+function closeExportModal() {
+  el.exportModal.style.display = "none";
+}
+
+function filterJokiQueue(filter) {
+  if (filter === "pending") {
+    return state.jokiQueue.filter((e) => e.status === "pending");
+  }
+  if (filter === "inProgress") {
+    return state.jokiQueue.filter((e) => e.status === "inProgress");
+  }
+  if (filter === "awaitingDelivery") {
+    return state.jokiQueue.filter((e) => e.status === "awaitingDelivery");
+  }
+  if (filter === "done") {
+    return state.jokiQueue.filter((e) => e.status === "done");
+  }
+  if (filter === "active") {
+    return state.jokiQueue.filter((e) => e.status === "pending" || e.status === "inProgress" || e.status === "awaitingDelivery");
+  }
+  return state.jokiQueue.slice();
+}
+
+function buildExportTxt(entries, filter) {
+  const now = new Date();
+  const dateStr = now.toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" });
+  const timeStr = now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+
+  const filterLabel = {
+    all: "SEMUA",
+    active: "AKTIF (Menunggu + Proses + Belum Dikirim)",
+    pending: "MENUNGGU",
+    inProgress: "PROSES",
+    awaitingDelivery: "BELUM DIKIRIM",
+    done: "SELESAI"
+  }[filter] || filter.toUpperCase();
+
+  const lines = [];
+  lines.push("============================================");
+  lines.push("  ANTREAN JOKI - EXPORT");
+  lines.push("============================================");
+  lines.push(`Tanggal   : ${dateStr}`);
+  lines.push(`Waktu     : ${timeStr}`);
+  lines.push(`Filter    : ${filterLabel}`);
+  lines.push(`Total     : ${entries.length} entri`);
+  lines.push("============================================");
+  lines.push("");
+
+  const sorted = entries.slice().sort((a, b) => (a.time || 0) - (b.time || 0));
+  sorted.forEach((entry, index) => {
+    const no = String(index + 1).padStart(3, "0");
+    const status = JOKI_STATUS_LABEL[entry.status] || entry.status;
+    const waktu = new Date(entry.time).toLocaleString("id-ID", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+    const userLine = entry.tiktokId ? `${entry.user} (@${entry.tiktokId})` : entry.user;
+    const giftLine = entry.giftName && entry.giftName !== "-"
+      ? `${entry.giftName}${entry.diamondCount ? " (" + entry.diamondCount + "🪙)" : ""}`
+      : "-";
+    const robloxLine = entry.username ? entry.username : "(belum diisi)";
+
+    lines.push(`#${no}  [${status.toUpperCase()}]`);
+    lines.push(`User      : ${userLine}`);
+    lines.push(`Gift      : ${giftLine}`);
+    lines.push(`Roblox    : ${robloxLine}`);
+    lines.push(`Masuk     : ${waktu}`);
+    if (entry.notes && entry.notes.trim()) {
+      lines.push(`Catatan   : ${entry.notes.trim()}`);
+    }
+    lines.push("");
+  });
+
+  lines.push("============================================");
+  lines.push(`Di-export dari TikTok LIVE Control Deck`);
+  lines.push("============================================");
+
+  return lines.join("\n");
+}
+
+function buildExportJson(entries, filter) {
+  const now = new Date().toISOString();
+  const safeEntries = entries.map((e) => {
+    const copy = { ...e };
+    delete copy.action;
+    return copy;
+  });
+  return JSON.stringify({
+    exportedAt: now,
+    filter,
+    count: safeEntries.length,
+    entries: safeEntries
+  }, null, 2);
+}
+
+function downloadFile(content, filename, mime) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function performExport() {
+  const formatRadio = document.querySelector('input[name="exportFormat"]:checked');
+  const filterRadio = document.querySelector('input[name="exportFilter"]:checked');
+  const format = formatRadio ? formatRadio.value : "txt";
+  const filter = filterRadio ? filterRadio.value : "all";
+
+  const entries = filterJokiQueue(filter);
+  if (entries.length === 0) {
+    showToast("Tidak ada entri untuk filter ini", "error");
+    return;
+  }
+
+  const now = new Date();
+  const filenameDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const filterSlug = filter === "all" ? "semua" : filter.toLowerCase();
+
+  if (format === "txt") {
+    const text = buildExportTxt(entries, filter);
+    const filename = `antrean-joki_${filterSlug}_${filenameDate}.txt`;
+    downloadFile(text, filename, "text/plain;charset=utf-8");
+    showToast(`Export TXT: ${entries.length} entri → ${filename}`, "success");
+  } else {
+    const json = buildExportJson(entries, filter);
+    const filename = `antrean-joki_${filterSlug}_${filenameDate}.json`;
+    downloadFile(json, filename, "application/json;charset=utf-8");
+    showToast(`Export JSON: ${entries.length} entri → ${filename}`, "success");
+  }
+
+  closeExportModal();
+}
+
+function openImportModal() {
+  el.importModal.style.display = "flex";
+}
+
+function closeImportModal() {
+  el.importModal.style.display = "none";
+}
+
+function handleImportFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      let entries;
+      if (Array.isArray(data)) {
+        entries = data;
+      } else if (data && Array.isArray(data.entries)) {
+        entries = data.entries;
+      } else {
+        showToast("File JSON tidak valid: harus array atau {entries: [...]}", "error");
+        return;
+      }
+
+      const modeRadio = document.querySelector('input[name="importMode"]:checked');
+      const mode = modeRadio ? modeRadio.value : "merge";
+
+      if (mode === "replace") {
+        state.jokiQueue = entries.map(normalizeImportedEntry);
+      } else {
+        const existingIds = new Set(state.jokiQueue.map((e) => e.id));
+        const newOnes = entries
+          .map(normalizeImportedEntry)
+          .filter((e) => !existingIds.has(e.id));
+        state.jokiQueue = [...state.jokiQueue, ...newOnes];
+      }
+
+      saveState();
+      renderJokiQueue();
+      closeImportModal();
+      showToast(`Import berhasil: ${entries.length} entri diproses (mode: ${mode})`, "success");
+    } catch (err) {
+      showToast("Gagal parse JSON: " + err.message, "error");
+    }
+  };
+  reader.onerror = () => {
+    showToast("Gagal baca file", "error");
+  };
+  reader.readAsText(file);
+}
+
+function normalizeImportedEntry(entry) {
+  return {
+    id: entry.id || generateId("joki"),
+    action: entry.action || "Manual",
+    user: entry.user || "Unknown",
+    username: entry.username || null,
+    tiktokId: entry.tiktokId || null,
+    giftName: entry.giftName || "-",
+    diamondCount: Number(entry.diamondCount) || 0,
+    qty: Number(entry.qty) || 1,
+    time: Number(entry.time) || Date.now(),
+    status: entry.status || "pending",
+    source: entry.source || "imported",
+    notes: entry.notes || ""
+  };
+}
+
+function renderGiftRules() {
+  el.ruleList.innerHTML = "";
+
+  state.giftRules.forEach((rule) => {
+    const row = document.createElement("div");
+    row.className = "list-item";
+
+    const tag = document.createElement("div");
+    tag.className = "rule-tag";
+    tag.textContent = rule.matchType === "diamond" ? "Coin" : (rule.matchType === "any" ? "Default" : "Gift");
+
+    const content = document.createElement("div");
+    content.className = "item-content";
+
+    const title = document.createElement("div");
+    title.className = "item-title";
+    title.textContent = rule.action;
+
+    const meta = document.createElement("div");
+    meta.className = "item-sub";
+
+    if (rule.matchType === "diamond") {
+      meta.textContent = `= ${rule.matchValue} coin${rule.matchValue == 1 ? "" : "s"}`;
+    } else if (rule.matchType === "any") {
+      meta.textContent = "Catch-all untuk gift yang belum ada rule spesifik. Bisa diedit.";
+    } else {
+      const giftDisplay = POPULAR_GIFTS.find(g => g.value === rule.matchValue);
+      const giftName = giftDisplay ? giftDisplay.name : rule.matchValue;
+      meta.textContent = `Gift: ${giftName}`;
+    }
+
+    content.appendChild(title);
+    content.appendChild(meta);
+
+    if (rule.locked) {
+      const lockTag = document.createElement("span");
+      lockTag.className = "rule-locked";
+      lockTag.textContent = "🔒 Default";
+      lockTag.title = "Rule ini tidak bisa dihapus, hanya bisa diedit aksinya";
+      row.appendChild(tag);
+      row.appendChild(content);
+      row.appendChild(lockTag);
+    } else {
+      const removeBtn = document.createElement("button");
+      removeBtn.className = "ghost small";
+      removeBtn.textContent = "Remove";
+      removeBtn.addEventListener("click", () => removeGiftRule(rule.id));
+
+      row.appendChild(tag);
+      row.appendChild(content);
+      row.appendChild(removeBtn);
+    }
+
+    el.ruleList.appendChild(row);
+  });
+}
+
+function addGiftRuleFromForm() {
+  const type = el.ruleType.value;
+  const action = el.ruleAction.value.trim();
+
+  if (!action) {
+    showToast("Aksi / Joki Type wajib diisi.", "error");
+    return;
+  }
+
+  let matchValue;
+  if (type === "diamond") {
+    const parsed = Number(el.ruleDiamondValue.value);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      showToast("Jumlah coin harus angka positif.", "error");
+      return;
+    }
+    matchValue = parsed;
+  } else {
+    if (!el.ruleGiftValue.value) {
+      showToast("Pilih gift terlebih dahulu.", "error");
+      return;
+    }
+    matchValue = el.ruleGiftValue.value;
+  }
+
+  state.giftRules.push({
+    id: generateId("rule"),
+    matchType: type,
+    matchValue,
+    action
+  });
+
+  el.ruleDiamondValue.value = "";
+  el.ruleGiftValue.value = "";
+  el.ruleAction.value = "";
+
+  saveState();
+  renderGiftRules();
+}
+
+function populateGiftSelector() {
+  const selector = el.ruleGiftValue;
+  POPULAR_GIFTS.forEach((gift) => {
+    const option = document.createElement("option");
+    option.value = gift.value;
+    option.textContent = gift.name;
+    selector.appendChild(option);
+  });
+}
+
+function updateGiftSelector() {
+  const type = el.ruleType.value;
+  if (type === "diamond") {
+    el.diamondField.style.display = "block";
+    el.giftField.style.display = "none";
+  } else {
+    el.diamondField.style.display = "none";
+    el.giftField.style.display = "block";
+  }
+}
+
+window.updateGiftSelector = updateGiftSelector;
+
+function removeGiftRule(ruleId) {
+  state.giftRules = state.giftRules.filter((rule) => rule.id !== ruleId);
+  saveState();
+  renderGiftRules();
+}
+
+function resetGiftRulesToDefault() {
+  showConfirm(
+    "Reset Gift Rules ke Default?",
+    "Semua rules akan dikembalikan ke default. Rules custom yang Anda buat akan hilang.",
+    () => {
+      state.giftRules = DEFAULT_GIFT_RULES.slice();
+      saveState();
+      renderGiftRules();
+      showToast("Gift rules dikembalikan ke default", "success");
+    },
+    "Ya, Reset"
+  );
+}
+
+function trimList(listEl, maxItems) {
+  while (listEl.children.length > maxItems) {
+    listEl.removeChild(listEl.firstChild);
+  }
+}
+
+function appendWithAutoScroll(listEl, followEnabled) {
+  if (!followEnabled) return;
+  const distanceFromBottom = listEl.scrollHeight - listEl.scrollTop - listEl.clientHeight;
+  if (distanceFromBottom < 60) {
+    listEl.scrollTop = listEl.scrollHeight;
+  }
+}
+
+function toggleChatFollow() {
+  chatFollowEnabled = !chatFollowEnabled;
+  el.chatFollowBtn.textContent = `Follow: ${chatFollowEnabled ? "On" : "Off"}`;
+  el.chatFollowBtn.classList.toggle("chat-follow-active", chatFollowEnabled);
+  if (chatFollowEnabled) {
+    el.chatList.scrollTop = el.chatList.scrollHeight;
+  }
+  showToast(`Chat follow ${chatFollowEnabled ? "aktif" : "nonaktif"}`, chatFollowEnabled ? "success" : "error");
+}
+
+function toggleGiftFollow() {
+  giftFollowEnabled = !giftFollowEnabled;
+  el.giftFollowBtn.textContent = `Follow: ${giftFollowEnabled ? "On" : "Off"}`;
+  el.giftFollowBtn.classList.toggle("chat-follow-active", giftFollowEnabled);
+  if (giftFollowEnabled) {
+    el.giftList.scrollTop = el.giftList.scrollHeight;
+  }
+  showToast(`Gift follow ${giftFollowEnabled ? "aktif" : "nonaktif"}`, giftFollowEnabled ? "success" : "error");
+}
+
+function addToWhitelistFromUser(msg) {
+  const uniqueId = msg.uniqueId || "";
+  if (!uniqueId) return;
+
+  addManualJokiEntry({
+    name: getDisplayLabel(msg),
+    username: uniqueId,
+    source: "chat"
+  });
+}
+
+function addManualJokiEntry({ name, username, action, source }) {
+  if (!name) {
+    showToast("Nama peserta wajib diisi.", "error");
+    return;
+  }
+
+  state.jokiQueue.push({
+    id: generateId("joki"),
+    action: action || "Manual",
+    user: name,
+    username: username || null,
+    tiktokId: null,
+    giftName: "-",
+    diamondCount: 0,
+    qty: 1,
+    time: Date.now(),
+    status: "pending",
+    source: source || "manual",
+    notes: ""
+  });
+
+  if (state.jokiQueue.length > MAX_JOKI_ITEMS) {
+    state.jokiQueue.shift();
+  }
+
+  saveState();
+  renderJokiQueue();
+}
+
+function removeFromWhitelist(key) {
+  const id = key;
+  state.jokiQueue = state.jokiQueue.filter((item) => item.id !== id);
+  saveState();
+  renderJokiQueue();
+}
+
+function removeJokiEntry(id) {
+  state.jokiQueue = state.jokiQueue.filter((item) => item.id !== id);
+  saveState();
+  renderJokiQueue();
+}
+
+function updateJokiUsername(id, newUsername) {
+  const entry = state.jokiQueue.find((item) => item.id === id);
+  if (entry) {
+    entry.username = newUsername || null;
+    saveState();
+    renderJokiQueue();
+  }
+}
+
+function startEditRobloxInline(entryId, targetEl) {
+  const entry = state.jokiQueue.find((e) => e.id === entryId);
+  if (!entry || !targetEl) return;
+
+  const infoLine = targetEl.closest(".joki-info-line");
+  if (!infoLine) return;
+
+  if (infoLine.querySelector(".joki-roblox-input")) return;
+
+  const original = targetEl;
+  const originalText = entry.username || "";
+
+  infoLine.classList.add("editing");
+
+  const staticParts = [];
+  infoLine.querySelectorAll(".joki-gift, .joki-sep, .joki-roblox-label").forEach((el) => {
+    staticParts.push(el);
+  });
+  staticParts.forEach((el) => (el.style.display = "none"));
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.value = originalText;
+  input.placeholder = "username Roblox";
+  input.className = "joki-roblox-input";
+  input.autocomplete = "off";
+  input.spellcheck = false;
+
+  const saveBtn = document.createElement("button");
+  saveBtn.className = "joki-roblox-save";
+  saveBtn.textContent = "✓";
+  saveBtn.title = "Simpan (Enter)";
+  saveBtn.type = "button";
+
+  const cancelBtn = document.createElement("button");
+  cancelBtn.className = "joki-roblox-cancel";
+  cancelBtn.textContent = "✕";
+  cancelBtn.title = "Batal (Esc)";
+  cancelBtn.type = "button";
+
+  original.replaceWith(input);
+  input.insertAdjacentElement("afterend", saveBtn);
+  saveBtn.insertAdjacentElement("afterend", cancelBtn);
+
+  setTimeout(() => {
+    input.focus();
+    input.select();
+  }, 10);
+
+  let done = false;
+  const commit = () => {
+    if (done) return;
+    done = true;
+    updateJokiUsername(entryId, input.value.trim());
+  };
+  const cancel = () => {
+    if (done) return;
+    done = true;
+    renderJokiQueue();
+  };
+
+  saveBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    commit();
+  });
+  cancelBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    cancel();
+  });
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      commit();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      cancel();
+    }
+  });
+  input.addEventListener("blur", () => {
+    setTimeout(() => {
+      if (!done && document.body.contains(input)) commit();
+    }, 120);
+  });
+}
+
+
+
+function renderWinners() {
+  el.winnerList.innerHTML = "";
+
+  state.winners.forEach((winner) => {
+    const row = document.createElement("div");
+    row.className = "list-item";
+
+    const pill = document.createElement("div");
+    pill.className = "pill";
+    pill.textContent = `#${winner.number}`;
+
+    const content = document.createElement("div");
+    content.className = "item-content";
+
+    const title = document.createElement("div");
+    title.className = "item-title";
+    title.textContent = winner.name;
+
+    const text = document.createElement("div");
+    text.className = "item-text";
+    text.textContent = winner.comment || "";
+
+    const meta = document.createElement("div");
+    meta.className = "item-meta";
+    meta.textContent = formatTime(winner.time);
+
+    content.appendChild(title);
+    if (winner.comment) {
+      content.appendChild(text);
+    }
+    content.appendChild(meta);
+
+    row.appendChild(pill);
+    row.appendChild(content);
+
+    el.winnerList.appendChild(row);
+  });
+
+  updateCounts();
+}
+
+function addWinner(entry) {
+  state.winners.unshift({
+    name: entry.name,
+    number: entry.number,
+    comment: entry.comment || "",
+    time: Date.now()
+  });
+
+  if (state.winners.length > 200) {
+    state.winners.pop();
+  }
+
+  saveState();
+  renderWinners();
+}
+
+function clearChat() {
+  el.chatList.innerHTML = "";
+  resetSessionNumbers();
+}
+
+function clearGifts() {
+  el.giftList.innerHTML = "";
+}
+
+function clearWhitelist() {
+  showConfirm(
+    "Hapus Semua Whitelist?",
+    "Whitelist lama akan dihapus.",
+    () => {
+      state.whitelist = [];
+      state.nextNumber = 1;
+      saveState();
+      renderWhitelist();
+      drawWheel();
+    },
+    "Ya, Hapus"
+  );
+}
+
+function clearWinners() {
+  if (state.winners.length === 0) {
+    showToast("Belum ada winners", "error");
+    return;
+  }
+  showConfirm(
+    "Hapus Semua Winners?",
+    `Riwayat ${state.winners.length} pemenang akan dihapus.`,
+    () => {
+      state.winners = [];
+      saveState();
+      renderWinners();
+      showToast("Winners dihapus", "success");
+    },
+    "Ya, Hapus"
+  );
+}
+
+function resizeWheel() {
+  const canvas = el.wheel;
+  const rect = canvas.getBoundingClientRect();
+  const size = Math.min(rect.width, rect.height);
+  const dpr = window.devicePixelRatio || 1;
+
+  canvas.width = size * dpr;
+  canvas.height = size * dpr;
+
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function drawWheel() {
+  const canvas = el.wheel;
+  const ctx = canvas.getContext("2d");
+  const size = canvas.width / (window.devicePixelRatio || 1);
+  const radius = size / 2 - 6;
+  const center = size / 2;
+
+  ctx.clearRect(0, 0, size, size);
+
+  const entries = state.sessionNumbers.slice().sort((a, b) => a.number - b.number);
+
+  if (entries.length === 0) {
+    ctx.beginPath();
+    ctx.arc(center, center, radius, 0, Math.PI * 2);
+    ctx.fillStyle = "#fff1dc";
+    ctx.fill();
+    ctx.fillStyle = "#6d6154";
+    ctx.font = "14px Space Grotesk";
+    ctx.textAlign = "center";
+    ctx.fillText("Sesi kosong", center, center);
+    return;
+  }
+
+  const angle = (Math.PI * 2) / entries.length;
+
+  entries.forEach((entry, index) => {
+    const start = -Math.PI / 2 + index * angle;
+    const end = start + angle;
+
+    ctx.beginPath();
+    ctx.moveTo(center, center);
+    ctx.arc(center, center, radius, start, end);
+    ctx.closePath();
+    ctx.fillStyle = WHEEL_COLORS[index % WHEEL_COLORS.length];
+    ctx.fill();
+
+    ctx.save();
+    ctx.translate(center, center);
+    ctx.rotate(start + angle / 2);
+    ctx.fillStyle = "#1b1b1b";
+    ctx.font = entries.length > 18 ? "11px Space Grotesk" : "13px Space Grotesk";
+    ctx.textAlign = "right";
+    ctx.fillText(`#${entry.number}`, radius - 12, 4);
+    ctx.restore();
+  });
+
+  ctx.beginPath();
+  ctx.arc(center, center, 16, 0, Math.PI * 2);
+  ctx.fillStyle = "#fffaf3";
+  ctx.fill();
+}
+
+function spinWheel() {
+  if (spinning) return;
+  if (state.sessionNumbers.length === 0) {
+    showToast("Sesi angka masih kosong.", "error");
+    return;
+  }
+
+  spinning = true;
+  el.spinBtn.disabled = true;
+
+  const entries = state.sessionNumbers.slice().sort((a, b) => a.number - b.number);
+  const index = Math.floor(Math.random() * entries.length);
+  const angleDeg = 360 / entries.length;
+
+  const targetNormalized = (360 - (index * angleDeg + angleDeg / 2)) % 360;
+  const currentNormalized = ((currentRotation % 360) + 360) % 360;
+  let delta = targetNormalized - currentNormalized;
+  if (delta < 0) delta += 360;
+
+  const extraSpins = 4 + Math.floor(Math.random() * 3);
+  const targetRotation = currentRotation + extraSpins * 360 + delta;
+
+  el.wheel.style.transform = `rotate(${targetRotation}deg)`;
+  currentRotation = targetRotation;
+
+  setTimeout(() => {
+    const winner = entries[index];
+    const commentText = winner.comment ? ` - ${winner.comment}` : "";
+    el.winnerDisplay.textContent = `Pemenang: ${winner.name} (#${winner.number})${commentText}`;
+    addWinner(winner);
+
+    if (state.settings.removeAfterSpin) {
+      removeSessionNumber(winner.number);
+    }
+
+    spinning = false;
+    el.spinBtn.disabled = false;
+  }, 4300);
+}
+
+function bindEvents() {
+  el.connectBtn.addEventListener("click", connectLive);
+  el.disconnectBtn.addEventListener("click", disconnectLive);
+  el.clearChatBtn.addEventListener("click", clearChat);
+  el.clearGiftsBtn.addEventListener("click", clearGifts);
+  el.chatFollowBtn.addEventListener("click", toggleChatFollow);
+  el.giftFollowBtn.addEventListener("click", toggleGiftFollow);
+  el.confirmOkBtn.addEventListener("click", () => {
+    const cb = confirmCallback;
+    closeConfirm();
+    if (cb) cb();
+  });
+  el.confirmCancelBtn.addEventListener("click", closeConfirm);
+  el.confirmModal.addEventListener("click", (e) => {
+    if (e.target === el.confirmModal) closeConfirm();
+  });
+  el.resetSessionBtn.addEventListener("click", () => {
+    if (state.sessionNumbers.length === 0) {
+      showToast("Sesi angka sudah kosong", "error");
+      return;
+    }
+    showConfirm(
+      "Reset Sesi Angka?",
+      `Sesi berisi ${state.sessionNumbers.length} angka akan dihapus.`,
+      () => {
+        resetSessionNumbers();
+        showToast("Sesi angka direset", "success");
+      },
+      "Ya, Reset"
+    );
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && el.confirmModal.style.display === "flex") {
+      closeConfirm();
+    }
+  });
+
+  el.removeAfterSpin.addEventListener("change", (event) => {
+    state.settings.removeAfterSpin = event.target.checked;
+    saveState();
+  });
+
+  el.numberMin.addEventListener("change", (event) => {
+    normalizeNumberRange();
+  });
+
+  el.numberMax.addEventListener("change", (event) => {
+    normalizeNumberRange();
+  });
+
+  el.clearWinnersBtn.addEventListener("click", clearWinners);
+  el.clearJokiBtn.addEventListener("click", clearJokiQueue);
+  el.exportJokiBtn.addEventListener("click", openExportModal);
+  el.importJokiBtn.addEventListener("click", openImportModal);
+  el.importOkBtn.addEventListener("click", () => {
+    el.importJokiInput.click();
+  });
+  el.importJokiInput.addEventListener("change", (e) => {
+    const file = e.target.files && e.target.files[0];
+    handleImportFile(file);
+    e.target.value = "";
+  });
+  el.importCancelBtn.addEventListener("click", closeImportModal);
+  el.importModal.addEventListener("click", (e) => {
+    if (e.target === el.importModal) closeImportModal();
+  });
+  el.exportOkBtn.addEventListener("click", performExport);
+  el.exportCancelBtn.addEventListener("click", closeExportModal);
+  el.exportModal.addEventListener("click", (e) => {
+    if (e.target === el.exportModal) closeExportModal();
+  });
+  el.copyJokiBtn.addEventListener("click", copyJokiQueueToClipboard);
+  el.exportRulesBtn.addEventListener("click", () => {
+    if (state.giftRules.length === 0) {
+      showToast("Belum ada gift rule", "error");
+      return;
+    }
+    downloadJSON(state.giftRules, `gift-rules-${new Date().toISOString().slice(0, 10)}.json`);
+    showToast(`Export berhasil: ${state.giftRules.length} rule`, "success");
+  });
+  el.resetRulesBtn.addEventListener("click", resetGiftRulesToDefault);
+  el.exportWinnersBtn.addEventListener("click", () => downloadJSON(state.winners, "winners.json"));
+  el.addRuleBtn.addEventListener("click", addGiftRuleFromForm);
+  el.spinBtn.addEventListener("click", spinWheel);
+
+  window.addEventListener("resize", () => {
+    resizeWheel();
+    drawWheel();
+  });
+}
+
+function init() {
+  el.confirmModal = $("confirmModal");
+  el.confirmTitle = $("confirmTitle");
+  el.confirmMessage = $("confirmMessage");
+  el.confirmOkBtn = $("confirmOkBtn");
+  el.confirmCancelBtn = $("confirmCancelBtn");
+  el.toast = $("toast");
+  el.usernameInput = $("usernameInput");
+  el.backendInput = $("backendInput");
+  el.connectBtn = $("connectBtn");
+  el.disconnectBtn = $("disconnectBtn");
+  el.statusText = $("statusText");
+  el.roomStats = $("roomStats");
+  el.bgIndicator = $("bgIndicator");
+  el.chatList = $("chatList");
+  el.giftList = $("giftList");
+  el.clearChatBtn = $("clearChatBtn");
+  el.clearGiftsBtn = $("clearGiftsBtn");
+  el.chatFollowBtn = $("chatFollowBtn");
+  el.giftFollowBtn = $("giftFollowBtn");
+  el.resetSessionBtn = $("resetSessionBtn");
+  el.sessionList = $("sessionList");
+  el.sessionCount = $("sessionCount");
+  el.removeAfterSpin = $("removeAfterSpin");
+  el.numberMin = $("numberMin");
+  el.numberMax = $("numberMax");
+  el.jokiList = $("jokiList");
+  el.jokiCount = $("jokiCount");
+  el.clearJokiBtn = $("clearJokiBtn");
+  el.copyJokiBtn = $("copyJokiBtn");
+  el.exportJokiBtn = $("exportJokiBtn");
+  el.importJokiBtn = $("importJokiBtn");
+  el.importJokiInput = $("importJokiInput");
+  el.importModal = $("importModal");
+  el.importOkBtn = $("importOkBtn");
+  el.importCancelBtn = $("importCancelBtn");
+  el.exportModal = $("exportModal");
+  el.exportOkBtn = $("exportOkBtn");
+  el.exportCancelBtn = $("exportCancelBtn");
+  el.winnerList = $("winnerList");
+  el.winnerCount = $("winnerCount");
+  el.winnerDisplay = $("winnerDisplay");
+  el.clearWinnersBtn = $("clearWinnersBtn");
+  el.ruleType = $("ruleType");
+  el.ruleDiamondValue = $("ruleDiamondValue");
+  el.ruleGiftValue = $("ruleGiftValue");
+  el.diamondField = $("diamondField");
+  el.giftField = $("giftField");
+  el.ruleAction = $("ruleAction");
+  el.addRuleBtn = $("addRuleBtn");
+  el.ruleList = $("ruleList");
+  el.exportRulesBtn = $("exportRulesBtn");
+  el.resetRulesBtn = $("resetRulesBtn");
+  el.exportWinnersBtn = $("exportWinnersBtn");
+  el.spinBtn = $("spinBtn");
+  el.wheel = $("wheel");
+
+  loadState();
+  if (!state.giftRules.length) {
+    state.giftRules = DEFAULT_GIFT_RULES.slice();
+  }
+  rebuildSessionIndexes();
+
+  el.usernameInput.value = state.lastUsername || "";
+  el.backendInput.value = state.backendUrl || "";
+  el.removeAfterSpin.checked = !!state.settings.removeAfterSpin;
+  el.numberMin.value = state.settings.numberMin;
+  el.numberMax.value = state.settings.numberMax;
+  normalizeNumberRange();
+
+  populateGiftSelector();
+  bindEvents();
+  renderSessionNumbers();
+  renderWinners();
+  renderJokiQueue();
+  renderGiftRules();
+  resizeWheel();
+
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(drawWheel);
+  } else {
+    drawWheel();
+  }
+}
+
+document.addEventListener("DOMContentLoaded", init);
