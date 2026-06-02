@@ -968,12 +968,10 @@ function renderJokiQueue() {
     const header = document.createElement("div");
     header.className = "joki-header";
 
-    if (entry.action) {
-      const actionBadge = document.createElement("span");
-      actionBadge.className = "joki-action-chip";
-      actionBadge.textContent = formatActionDisplay(entry.action, entry.qty);
-      header.appendChild(actionBadge);
-    }
+    const actionBadge = document.createElement("span");
+    actionBadge.className = "joki-action-chip";
+    actionBadge.textContent = getJokiBadgeText(entry);
+    header.appendChild(actionBadge);
 
     const statusBadge = document.createElement("span");
     statusBadge.className = `joki-status ${getJokiStatusClass(statusKey)}`;
@@ -1131,6 +1129,17 @@ function formatActionDisplay(action, qty) {
     return `${qty}x ${action}`;
   }
   return action;
+}
+
+function getJokiBadgeText(entry) {
+  if (entry.action && String(entry.action).trim()) {
+    return formatActionDisplay(entry.action, entry.qty);
+  }
+  if (entry.giftName && entry.giftName !== "-") {
+    const qtyText = entry.qty && Number(entry.qty) > 1 ? ` x${entry.qty}` : "";
+    return `${entry.giftName}${qtyText}`;
+  }
+  return entry.source === "manual" ? "Manual" : "Antrean";
 }
 
 function copyToClipboard(text, successMsg) {
