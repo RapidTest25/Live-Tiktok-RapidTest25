@@ -10,9 +10,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=20260602-rulesv2a">
+  <link rel="stylesheet" href="styles.css?v=20260603-focuslayout1">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.4.1/socket.io.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script src="app.js?v=20260602-rulesv2a" defer></script>
+  <script src="app.js?v=20260603-focuslayout1" defer></script>
 </head>
 <body>
   <div class="bg-orb orb-1"></div>
@@ -90,6 +90,53 @@
         <div id="giftList" class="list gift-list"></div>
       </section>
 
+      <section class="card panel compact-panel">
+        <div class="panel-header">
+          <div>
+            <h2>Sesi Angka</h2>
+            <p class="panel-sub">Ambil angka dari chat setelah Clear. Satu user hanya boleh 1 angka.</p>
+          </div>
+          <button id="resetSessionBtn" class="ghost">Reset</button>
+        </div>
+        <div class="row wrap compact-row">
+          <div class="field tiny">
+            <label for="numberMin">Min</label>
+            <input id="numberMin" type="number" min="1" step="1">
+          </div>
+          <div class="field tiny">
+            <label for="numberMax">Max</label>
+            <input id="numberMax" type="number" min="1" step="1">
+          </div>
+        </div>
+        <div id="sessionList" class="list session-list compact-list"></div>
+        <div class="panel-footer">
+          <span id="sessionCount" class="count">0 angka</span>
+        </div>
+      </section>
+
+      <section class="card panel compact-panel">
+        <div class="panel-header">
+          <div>
+            <h2>Spinner</h2>
+            <p class="panel-sub">Spin memilih angka dari sesi chat terbaru.</p>
+          </div>
+        </div>
+        <div class="spinner-wrap compact-spinner-wrap">
+          <div class="wheel-frame compact-wheel-frame">
+            <canvas id="wheel" width="320" height="320"></canvas>
+            <div class="pointer"></div>
+          </div>
+        </div>
+        <div class="row wrap compact-row">
+          <button id="spinBtn" class="primary">Spin</button>
+          <label class="toggle">
+            <input id="removeAfterSpin" type="checkbox" checked>
+            <span>Hapus pemenang dari sesi angka</span>
+          </label>
+        </div>
+        <div id="winnerDisplay" class="winner-display">Belum ada pemenang</div>
+      </section>
+
       <details class="tools-drawer card">
         <summary>Tools Tambahan</summary>
 
@@ -105,53 +152,6 @@
           </div>
         </div>
         <div id="chatList" class="list chat-list"></div>
-      </section>
-
-      <section class="card panel">
-        <div class="panel-header">
-          <div>
-            <h2>Sesi Angka (Chat)</h2>
-            <p class="panel-sub">Ambil angka dari chat setelah Clear. Satu user hanya boleh 1 angka.</p>
-          </div>
-          <button id="resetSessionBtn" class="ghost">Reset</button>
-        </div>
-        <div class="row wrap">
-          <div class="field tiny">
-            <label for="numberMin">Min</label>
-            <input id="numberMin" type="number" min="1" step="1">
-          </div>
-          <div class="field tiny">
-            <label for="numberMax">Max</label>
-            <input id="numberMax" type="number" min="1" step="1">
-          </div>
-        </div>
-        <div id="sessionList" class="list session-list"></div>
-        <div class="panel-footer">
-          <span id="sessionCount" class="count">0 angka</span>
-        </div>
-      </section>
-
-      <section class="card panel">
-        <div class="panel-header">
-          <div>
-            <h2>Spinner</h2>
-            <p class="panel-sub">Spin memilih angka dari sesi chat terbaru.</p>
-          </div>
-        </div>
-        <div class="spinner-wrap">
-          <div class="wheel-frame">
-            <canvas id="wheel" width="320" height="320"></canvas>
-            <div class="pointer"></div>
-          </div>
-        </div>
-        <div class="row wrap">
-          <button id="spinBtn" class="primary">Spin</button>
-          <label class="toggle">
-            <input id="removeAfterSpin" type="checkbox" checked>
-            <span>Hapus pemenang dari sesi angka</span>
-          </label>
-        </div>
-        <div id="winnerDisplay" class="winner-display">Belum ada pemenang</div>
       </section>
 
       <section class="card panel">

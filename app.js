@@ -365,6 +365,7 @@ function loadState() {
       state.jokiQueue = [...migratedEntries, ...state.jokiQueue];
     }
     
+    let migratedGiftManualEntries = false;
     state.jokiQueue = state.jokiQueue.map((entry) => {
       const normalized = { ...entry, status: entry.status || "pending" };
       normalized.notes = typeof entry.notes === "string" ? entry.notes : "";
@@ -376,6 +377,27 @@ function loadState() {
       }
       if (entry.source !== "gift" && !normalized.tiktokId) {
         normalized.tiktokId = null;
+      }
+      if (normalized.source === "gift" && (!normalized.action || /^manual$/i.test(String(normalized.action || "").trim()))) {
+        const giftKey = normalizeKey(normalized.giftName);
+        if (giftKey.includes("gg")) {
+          const rewardQty = Math.floor((Number(normalized.giftQty) || 1) / 3);
+          if (rewardQty > 0) {
+            normalized.action = "1x kick celestial mutasi";
+            normalized.qty = rewardQty;
+            normalized.rewardMode = "direct";
+            normalized.unmatched = false;
+            normalized.ruleId = "rule-gg-kick-celestial";
+            normalized.unitCount = 3;
+          } else {
+            normalized.action = "Belum diatur";
+            normalized.unmatched = true;
+          }
+        } else {
+          normalized.action = "Belum diatur";
+          normalized.unmatched = true;
+        }
+        migratedGiftManualEntries = true;
       }
       if (normalized.status === "classDone") {
         normalized.status = "inProgress";
@@ -419,6 +441,9 @@ function loadState() {
     const criticalRuleIds = ["rule-rose-spin-mutasi", "rule-gg-kick-celestial", "rule-default"];
     const existingIds = new Set(state.giftRules.map((r) => r.id));
     let rulesInjected = false;
+    if (migratedGiftManualEntries) {
+      rulesInjected = true;
+    }
     criticalRuleIds.forEach((id) => {
       if (!existingIds.has(id)) {
         const def = DEFAULT_GIFT_RULES.find((r) => r.id === id);
