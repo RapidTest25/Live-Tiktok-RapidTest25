@@ -1004,6 +1004,8 @@ function renderJokiQueue() {
     const actionBadge = document.createElement("span");
     actionBadge.className = "joki-action-chip";
     actionBadge.textContent = getJokiBadgeText(entry);
+    actionBadge.title = "Klik untuk edit keterangan antrean";
+    actionBadge.addEventListener("click", () => startEditActionInline(entry.id, actionBadge));
     header.appendChild(actionBadge);
 
     const statusBadge = document.createElement("span");
@@ -1717,6 +1719,23 @@ function updateJokiUsername(id, newUsername) {
   }
 }
 
+function updateJokiAction(id, newAction) {
+  const entry = state.jokiQueue.find((item) => item.id === id);
+  if (!entry) return;
+
+  const cleaned = String(newAction || "").trim();
+  if (!cleaned) {
+    renderJokiQueue();
+    return;
+  }
+
+  entry.action = cleaned;
+  entry.unmatched = false;
+  entry.matchKey = cleaned;
+  saveState();
+  renderJokiQueue();
+}
+
 function startEditRobloxInline(entryId, targetEl) {
   const entry = state.jokiQueue.find((e) => e.id === entryId);
   if (!entry || !targetEl) return;
@@ -1771,6 +1790,81 @@ function startEditRobloxInline(entryId, targetEl) {
     if (done) return;
     done = true;
     updateJokiUsername(entryId, input.value.trim());
+  };
+  const cancel = () => {
+    if (done) return;
+    done = true;
+    renderJokiQueue();
+  };
+
+  saveBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    commit();
+  });
+  cancelBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    cancel();
+  });
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      commit();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      cancel();
+    }
+  });
+  input.addEventListener("blur", () => {
+    setTimeout(() => {
+      if (!done && document.body.contains(input)) commit();
+    }, 120);
+  });
+}
+
+function startEditActionInline(entryId, targetEl) {
+  const entry = state.jokiQueue.find((e) => e.id === entryId);
+  if (!entry || !targetEl) return;
+
+  const header = targetEl.closest(".joki-header");
+  if (!header || header.querySelector(".joki-action-input")) return;
+
+  const originalText = entry.unmatched ? "" : (entry.action || "");
+  header.classList.add("editing-action");
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.value = originalText;
+  input.placeholder = "isi keterangan antrean";
+  input.className = "joki-action-input";
+  input.autocomplete = "off";
+  input.spellcheck = false;
+
+  const saveBtn = document.createElement("button");
+  saveBtn.className = "joki-action-save";
+  saveBtn.textContent = "✓";
+  saveBtn.type = "button";
+  saveBtn.title = "Simpan (Enter)";
+
+  const cancelBtn = document.createElement("button");
+  cancelBtn.className = "joki-action-cancel";
+  cancelBtn.textContent = "✕";
+  cancelBtn.type = "button";
+  cancelBtn.title = "Batal (Esc)";
+
+  targetEl.replaceWith(input);
+  input.insertAdjacentElement("afterend", saveBtn);
+  saveBtn.insertAdjacentElement("afterend", cancelBtn);
+
+  setTimeout(() => {
+    input.focus();
+    input.select();
+  }, 10);
+
+  let done = false;
+  const commit = () => {
+    if (done) return;
+    done = true;
+    updateJokiAction(entryId, input.value);
   };
   const cancel = () => {
     if (done) return;
