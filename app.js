@@ -408,8 +408,7 @@ function setConnectionState(stateName) {
 function resolveBackendUrl() {
   const custom = el.backendInput.value.trim();
   if (custom) return custom;
-  if (location.protocol === "file:") return "https://tiktok-chat-reader.zerody.one/";
-  return undefined;
+  return "https://enforcement-lap-signal-fat.trycloudflare.com/";
 }
 
 function ensureConnection() {
