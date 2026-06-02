@@ -968,6 +968,13 @@ function renderJokiQueue() {
     const header = document.createElement("div");
     header.className = "joki-header";
 
+    if (entry.action) {
+      const actionBadge = document.createElement("span");
+      actionBadge.className = "joki-action-chip";
+      actionBadge.textContent = formatActionDisplay(entry.action, entry.qty);
+      header.appendChild(actionBadge);
+    }
+
     const statusBadge = document.createElement("span");
     statusBadge.className = `joki-status ${getJokiStatusClass(statusKey)}`;
     statusBadge.textContent = JOKI_STATUS_LABEL[statusKey] || JOKI_STATUS_LABEL.pending;

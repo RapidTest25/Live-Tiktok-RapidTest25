@@ -419,6 +419,22 @@ button:hover:not(:disabled) {
   border: 1px solid transparent;
 }
 
+.joki-action-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  min-width: 0;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: #8fc64f;
+  color: #183404;
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .joki-status::before {
   content: "";
   width: 7px;
@@ -501,7 +517,7 @@ button:hover:not(:disabled) {
   grid-area: header;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   flex-wrap: wrap;
   gap: 6px 8px;
   min-width: 0;
