@@ -389,6 +389,33 @@ function loadState() {
         rulesInjected = true;
       }
     }
+
+    const defaultRule = state.giftRules.find((r) => r.id === "rule-default");
+    const defaultAction = defaultRule ? defaultRule.action : "1x kick";
+    state.jokiQueue = state.jokiQueue.map((entry) => {
+      const normalized = { ...entry };
+      if (normalized.source === "gift") {
+        if (!normalized.matchKey) {
+          normalized.matchKey = normalized.unmatched
+            ? `${normalized.giftName || "gift"}|${Number(normalized.diamondCount) || 0}`
+            : (normalized.action || `${normalized.giftName || "gift"}|${Number(normalized.diamondCount) || 0}`);
+        }
+        if (!normalized.unmatched && normalized.action === defaultAction) {
+          normalized.unmatched = true;
+          normalized.matchKey = `${normalized.giftName || "gift"}|${Number(normalized.diamondCount) || 0}`;
+          rulesInjected = true;
+        }
+        if ((Number(normalized.qty) || 1) > 1 && (Number(normalized.diamondCount) || 0) > 0) {
+          const looksLikeSingleEvent = !normalized.lastAddedAt || normalized.lastAddedAt === normalized.time;
+          if (looksLikeSingleEvent) {
+            normalized.diamondCount = (Number(normalized.diamondCount) || 0) * (Number(normalized.qty) || 1);
+            rulesInjected = true;
+          }
+        }
+      }
+      return normalized;
+    });
+
     if (rulesInjected) saveState();
     state.settings = Object.assign(state.settings, parsed.settings || {});
     state.nextNumber = typeof parsed.nextNumber === "number" ? parsed.nextNumber : state.nextNumber;
@@ -892,18 +919,22 @@ function processGiftRules(msg) {
 }
 
 function addJokiQueueEntry(entry) {
+  const addedQty = Math.max(1, Number(entry.qty) || 1);
+  const addedCoinsTotal = (Number(entry.diamondCount) || 0) * addedQty;
+  const matchKey = entry.unmatched
+    ? `${entry.giftName || "gift"}|${Number(entry.diamondCount) || 0}`
+    : (entry.action || `${entry.giftName || "gift"}|${Number(entry.diamondCount) || 0}`);
+
   if (entry.source === "gift" && entry.tiktokId && entry.action) {
     const existing = state.jokiQueue.find((item) =>
       item.source === "gift" &&
       item.tiktokId === entry.tiktokId &&
-      item.action === entry.action &&
+      (item.matchKey || item.action) === matchKey &&
       item.status === "pending"
     );
     if (existing) {
-      const addedQty = Math.max(1, Number(entry.qty) || 1);
-      const addedDiamonds = Number(entry.diamondCount) || 0;
       existing.qty = (Number(existing.qty) || 1) + addedQty;
-      existing.diamondCount = (Number(existing.diamondCount) || 0) + addedDiamonds;
+      existing.diamondCount = (Number(existing.diamondCount) || 0) + addedCoinsTotal;
       existing.lastAddedAt = Date.now();
       saveState();
       renderJokiQueue();
@@ -915,16 +946,18 @@ function addJokiQueueEntry(entry) {
   state.jokiQueue.push({
     id: generateId("joki"),
     action: entry.action,
+    matchKey,
     user: entry.user,
     username: entry.username || null,
     tiktokId: entry.tiktokId || null,
     giftName: entry.giftName || "-",
-    diamondCount: entry.diamondCount || 0,
-    qty: entry.qty || 1,
+    diamondCount: addedCoinsTotal,
+    qty: addedQty,
     time: Date.now(),
     status: entry.status || "pending",
     source: entry.source || "unknown",
-    notes: entry.notes || ""
+    notes: entry.notes || "",
+    unmatched: !!entry.unmatched
   });
 
   if (state.jokiQueue.length > MAX_JOKI_ITEMS) {
@@ -988,7 +1021,7 @@ function renderJokiQueue() {
     displayName.className = "joki-display-name";
     displayName.textContent = entry.user;
     userLine.appendChild(displayName);
-    if (entry.tiktokId) {
+    if (entry.tiktokId && !String(entry.user || "").includes(`@${entry.tiktokId}`)) {
       const tiktokIdEl = document.createElement("span");
       tiktokIdEl.className = "joki-tiktok-id";
       tiktokIdEl.textContent = `(@${entry.tiktokId})`;
@@ -1003,8 +1036,9 @@ function renderJokiQueue() {
     if (entry.giftName && entry.giftName !== "-") {
       const giftEl = document.createElement("span");
       giftEl.className = "joki-gift";
+      const qtyText = entry.qty && Number(entry.qty) > 1 ? ` x${entry.qty}` : "";
       const diamondLabel = entry.diamondCount ? ` (${entry.diamondCount}🪙)` : "";
-      giftEl.textContent = `${entry.giftName}${diamondLabel}`;
+      giftEl.textContent = `${entry.giftName}${qtyText}${diamondLabel}`;
       infoLine.appendChild(giftEl);
     }
 
@@ -1132,6 +1166,9 @@ function formatActionDisplay(action, qty) {
 }
 
 function getJokiBadgeText(entry) {
+  if (entry.unmatched) {
+    return entry.giftName && entry.giftName !== "-" ? `${entry.giftName} belum diatur` : "Belum diatur";
+  }
   if (entry.action && String(entry.action).trim()) {
     return formatActionDisplay(entry.action, entry.qty);
   }
@@ -1429,6 +1466,7 @@ function normalizeImportedEntry(entry) {
   return {
     id: entry.id || generateId("joki"),
     action: entry.action || "Manual",
+    matchKey: entry.matchKey || entry.action || `${entry.giftName || "gift"}|${Number(entry.diamondCount) || 0}`,
     user: entry.user || "Unknown",
     username: entry.username || null,
     tiktokId: entry.tiktokId || null,
@@ -1438,7 +1476,8 @@ function normalizeImportedEntry(entry) {
     time: Number(entry.time) || Date.now(),
     status: entry.status || "pending",
     source: entry.source || "imported",
-    notes: entry.notes || ""
+    notes: entry.notes || "",
+    unmatched: !!entry.unmatched
   };
 }
 
