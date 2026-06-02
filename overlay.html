@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Overlay Mutasi</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: rgba(0, 0, 0, 0);
+      --card: rgba(8, 15, 24, 0.86);
+      --text: #ffffff;
+      --muted: rgba(255, 255, 255, 0.72);
+      --accent: #8fc64f;
+      --accent-2: #3b82f6;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      font-family: "Segoe UI", system-ui, sans-serif;
+      color: var(--text);
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+    }
+    .wrap {
+      width: min(900px, 92vw);
+      padding: 26px 30px;
+      border-radius: 28px;
+      background: radial-gradient(circle at top left, rgba(59,130,246,0.22), rgba(8,15,24,0.94) 55%);
+      border: 1px solid rgba(255,255,255,0.12);
+      box-shadow: 0 30px 80px rgba(0,0,0,0.4);
+    }
+    .tag {
+      display: inline-flex;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(143, 198, 79, 0.18);
+      color: #d9ff9a;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      font-size: 0.92rem;
+    }
+    .title {
+      margin: 16px 0 8px;
+      font-size: clamp(2rem, 5vw, 4rem);
+      line-height: 1.05;
+      font-weight: 900;
+    }
+    .viewer {
+      font-size: clamp(1rem, 2.2vw, 1.4rem);
+      color: var(--muted);
+      margin-bottom: 14px;
+      font-weight: 600;
+    }
+    .gift {
+      font-size: clamp(1rem, 2vw, 1.25rem);
+      color: #8fe7e0;
+      font-weight: 700;
+    }
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      font-size: 1.25rem;
+      padding: 50px 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap" id="overlayRoot">
+    <div class="empty">Belum ada hasil spin mutasi</div>
+  </div>
+  <script>
+    const STORAGE_KEY = "tiktok_live_tool_state_v1";
+    const root = document.getElementById("overlayRoot");
+
+    function getLatestSpinEntry() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        const queue = Array.isArray(parsed.jokiQueue) ? parsed.jokiQueue : [];
+        const spinEntries = queue
+          .filter((entry) => entry && entry.rewardMode === "spin")
+          .sort((a, b) => (b.lastAddedAt || b.time || 0) - (a.lastAddedAt || a.time || 0));
+        return spinEntries[0] || null;
+      } catch (err) {
+        return null;
+      }
+    }
+
+    function render() {
+      const entry = getLatestSpinEntry();
+      if (!entry) {
+        root.innerHTML = '<div class="empty">Belum ada hasil spin mutasi</div>';
+        return;
+      }
+
+      const giftQty = Number(entry.giftQty) || Number(entry.qty) || 1;
+      const giftText = entry.giftName && entry.giftName !== "-"
+        ? `${entry.giftName}${giftQty > 1 ? ` x${giftQty}` : ""}${entry.diamondCount ? ` (${entry.diamondCount}🪙)` : ""}`
+        : "Gift";
+
+      root.innerHTML = `
+        <div class="tag">HASIL SPIN MUTASI</div>
+        <div class="title">${entry.action || "Mutasi"}</div>
+        <div class="viewer">${entry.user || "Viewer"}</div>
+        <div class="gift">${giftText}</div>
+      `;
+    }
+
+    render();
+    setInterval(render, 800);
+    window.addEventListener("storage", render);
+  </script>
+</body>
+</html>

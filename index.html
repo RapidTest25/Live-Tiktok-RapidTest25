@@ -23,10 +23,10 @@
     <header class="hero">
       <div>
         <p class="eyebrow">Live Stream Toolkit</p>
-        <h1>TikTok LIVE Control Deck</h1>
-        <p class="subtitle">Chat dan gift real-time, whitelist antrean, dan spinner pemenang. Data disimpan di browser (JSON via localStorage), jadi tetap ada setelah refresh.</p>
+        <h1>Antrean Live</h1>
+        <p class="subtitle">Mode live fokus satu layar: antrean, gifts, dan kontrol inti.</p>
       </div>
-      <div class="badge">Ringan + Tanpa Database</div>
+      <div class="badge">Live Focus Mode</div>
     </header>
 
     <section class="card connect-card">
@@ -59,12 +59,16 @@
             <h2>Antrean</h2>
           </div>
           <div class="joki-panel-header-actions">
+            <a id="overlayLink" class="ghost icon-btn panel-link-btn" href="overlay.html" target="_blank" rel="noopener noreferrer" title="Buka overlay OBS">Overlay</a>
             <button id="exportJokiBtn" class="ghost icon-btn" title="Export (TXT / JSON) dengan filter">Export ▾</button>
             <button id="importJokiBtn" class="ghost icon-btn" title="Import dari file JSON">Import</button>
             <input id="importJokiInput" type="file" accept="application/json" style="display:none">
             <button id="copyJokiBtn" class="ghost icon-btn" title="Salin ke clipboard">Copy</button>
             <button id="clearJokiBtn" class="ghost icon-btn" title="Hapus semua antrian">Clear</button>
           </div>
+        </div>
+        <div class="queue-toolbar">
+          <input id="jokiSearchInput" type="text" placeholder="Cari nama / @id / Roblox / gift...">
         </div>
         <div id="jokiList" class="list joki-list"></div>
         <div class="panel-footer">
@@ -86,7 +90,10 @@
         <div id="giftList" class="list gift-list"></div>
       </section>
 
-      <section class="card panel">
+      <details class="tools-drawer card">
+        <summary>Tools Tambahan</summary>
+
+      <section class="card panel nested-panel">
         <div class="panel-header">
           <div>
             <h2>Live Chat</h2>
@@ -199,6 +206,8 @@
           <button id="clearWinnersBtn" class="ghost">Clear</button>
         </div>
       </section>
+
+      </details>
     </main>
   </div>
 

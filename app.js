@@ -107,6 +107,7 @@ let diamondsCount = 0;
 let sessionUserMap = new Map();
 let sessionNumberMap = new Map();
 let editingEntryId = null;
+let jokiSearchQuery = "";
 
 const el = {};
 
@@ -1163,11 +1164,34 @@ function renderJokiQueue() {
     return;
   }
 
+  const search = normalizeKey(jokiSearchQuery);
   const sorted = state.jokiQueue
     .slice()
-    .sort((a, b) => (a.time || 0) - (b.time || 0));
+    .sort((a, b) => (a.time || 0) - (b.time || 0))
+    .filter((entry) => {
+      if (!search) return true;
+      const haystack = [
+        entry.user,
+        entry.tiktokId,
+        entry.username,
+        entry.giftName,
+        entry.action,
+        entry.notes,
+        getJokiBadgeText(entry)
+      ].map((x) => normalizeKey(x)).join(" ");
+      return haystack.includes(search);
+    });
 
-  sorted.forEach((entry) => {
+  if (!sorted.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.textContent = "Tidak ada antrean yang cocok dengan pencarian.";
+    el.jokiList.appendChild(empty);
+    updateCounts();
+    return;
+  }
+
+  sorted.forEach((entry, index) => {
     const row = document.createElement("div");
     const statusKey = entry.status || "pending";
     row.className = `list-item joki-card status-${getJokiStatusClass(statusKey)}`;
@@ -1183,6 +1207,11 @@ function renderJokiQueue() {
 
     const header = document.createElement("div");
     header.className = "joki-header";
+
+    const queueNo = document.createElement("span");
+    queueNo.className = "joki-queue-no";
+    queueNo.textContent = `#${String(index + 1).padStart(2, "0")}`;
+    header.appendChild(queueNo);
 
     const actionBadge = document.createElement("span");
     actionBadge.className = "joki-action-chip";
@@ -1221,7 +1250,8 @@ function renderJokiQueue() {
     if (entry.giftName && entry.giftName !== "-") {
       const giftEl = document.createElement("span");
       giftEl.className = "joki-gift";
-      const qtyText = entry.qty && Number(entry.qty) > 1 ? ` x${entry.qty}` : "";
+      const giftQty = Number(entry.giftQty) || Number(entry.qty) || 1;
+      const qtyText = giftQty > 1 ? ` x${giftQty}` : "";
       const diamondLabel = entry.diamondCount ? ` (${entry.diamondCount}🪙)` : "";
       giftEl.textContent = `${entry.giftName}${qtyText}${diamondLabel}`;
       infoLine.appendChild(giftEl);
@@ -1361,7 +1391,8 @@ function getJokiBadgeText(entry) {
     return formatActionDisplay(entry.action, entry.qty);
   }
   if (entry.giftName && entry.giftName !== "-") {
-    const qtyText = entry.qty && Number(entry.qty) > 1 ? ` x${entry.qty}` : "";
+    const giftQty = Number(entry.giftQty) || Number(entry.qty) || 1;
+    const qtyText = giftQty > 1 ? ` x${giftQty}` : "";
     return `${entry.giftName}${qtyText}`;
   }
   return entry.source === "manual" ? "Manual" : "Antrean";
@@ -2380,6 +2411,10 @@ function bindEvents() {
     if (e.target === el.exportModal) closeExportModal();
   });
   el.copyJokiBtn.addEventListener("click", copyJokiQueueToClipboard);
+  el.jokiSearchInput.addEventListener("input", (event) => {
+    jokiSearchQuery = event.target.value || "";
+    renderJokiQueue();
+  });
   el.exportRulesBtn.addEventListener("click", () => {
     if (state.giftRules.length === 0) {
       showToast("Belum ada gift rule", "error");
@@ -2426,6 +2461,7 @@ function init() {
   el.numberMin = $("numberMin");
   el.numberMax = $("numberMax");
   el.jokiList = $("jokiList");
+  el.jokiSearchInput = $("jokiSearchInput");
   el.jokiCount = $("jokiCount");
   el.clearJokiBtn = $("clearJokiBtn");
   el.copyJokiBtn = $("copyJokiBtn");

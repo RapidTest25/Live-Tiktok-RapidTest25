@@ -85,9 +85,9 @@ body::before {
 .app {
   position: relative;
   z-index: 1;
-  max-width: 1240px;
+  max-width: 1480px;
   margin: 0 auto;
-  padding: 32px 24px 48px;
+  padding: 16px 18px 24px;
 }
 
 .hero {
@@ -95,7 +95,7 @@ body::before {
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  margin-bottom: 24px;
+  margin-bottom: 12px;
 }
 
 .eyebrow {
@@ -108,24 +108,26 @@ body::before {
 
 .hero h1 {
   font-family: var(--font-serif);
-  font-size: 2.4rem;
-  margin: 0 0 8px;
+  font-size: 1.55rem;
+  margin: 0 0 4px;
 }
 
 .subtitle {
   margin: 0;
   color: var(--muted);
-  max-width: 600px;
+  max-width: 520px;
+  font-size: 0.9rem;
 }
 
 .badge {
   background: var(--accent-2);
   color: #fff;
-  padding: 10px 16px;
+  padding: 8px 14px;
   border-radius: 999px;
   font-weight: 600;
   box-shadow: var(--shadow);
   white-space: nowrap;
+  font-size: 0.82rem;
 }
 
 .card {
@@ -133,7 +135,7 @@ body::before {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  padding: 18px 20px;
+  padding: 14px 16px;
   animation: enter 0.6s ease both;
 }
 
@@ -149,14 +151,14 @@ body::before {
 }
 
 .connect-card {
-  margin-bottom: 24px;
+  margin-bottom: 14px;
 }
 
 .row {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .row.small {
@@ -266,8 +268,24 @@ button:hover:not(:disabled) {
 
 .grid {
   display: grid;
-  gap: 20px;
+  gap: 14px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+}
+
+.queue-toolbar {
+  margin-bottom: 8px;
+}
+
+.queue-toolbar input {
+  width: 100%;
+}
+
+.panel-link-btn {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .panel-header {
@@ -299,7 +317,7 @@ button:hover:not(:disabled) {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: 360px;
+  max-height: min(66vh, 700px);
   overflow-y: auto;
   overflow-anchor: none;
   padding-right: 6px;
@@ -436,6 +454,19 @@ button:hover:not(:disabled) {
   cursor: pointer;
 }
 
+.joki-queue-no {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(15, 157, 146, 0.08);
+  color: #0a6b63;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
 .joki-action-chip:hover {
   filter: brightness(0.98);
 }
@@ -474,7 +505,7 @@ button:hover:not(:disabled) {
 }
 
 .joki-list {
-  max-height: 460px;
+  max-height: min(72vh, 860px);
 }
 
 .joki-list .list-item.joki-card {
@@ -484,8 +515,8 @@ button:hover:not(:disabled) {
     "body"
     "actions";
   grid-template-columns: 1fr;
-  gap: 6px 0;
-  padding: 10px 12px 8px;
+  gap: 4px 0;
+  padding: 8px 10px 7px;
   align-items: stretch;
   position: relative;
   border-left: 3px solid #fbbf24;
@@ -524,9 +555,9 @@ button:hover:not(:disabled) {
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 6px 8px;
+  gap: 4px 6px;
   min-width: 0;
-  margin-bottom: 4px;
+  margin-bottom: 1px;
 }
 
 .joki-list .list-item.joki-card > .joki-header.editing-action {
@@ -580,26 +611,40 @@ button:hover:not(:disabled) {
   grid-area: body;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
   min-width: 0;
 }
 
 .joki-list .list-item.joki-card > .joki-actions {
   grid-area: actions;
   display: flex;
-  gap: 6px;
+  gap: 4px;
   flex-wrap: wrap;
   border-top: 1px dashed var(--border);
-  padding-top: 6px;
+  padding-top: 5px;
   margin-top: 4px;
 }
 
 .joki-list .list-item.joki-card > .joki-actions button {
   flex: 1;
   min-width: 0;
-  padding: 5px 10px;
-  font-size: 0.75rem;
+  padding: 6px 10px;
+  font-size: 0.74rem;
   border-radius: 8px;
+}
+
+.joki-display-name {
+  font-size: 0.84rem;
+}
+
+.joki-tiktok-id,
+.joki-gift,
+.joki-roblox-label,
+.joki-roblox-value,
+.joki-roblox-empty,
+.joki-notes-label,
+.joki-notes-text {
+  font-size: 0.8rem;
 }
 
 .joki-list .list-item.joki-card > .joki-actions button.primary-action {
@@ -615,6 +660,33 @@ button:hover:not(:disabled) {
 
 .joki-list .list-item.joki-card > .joki-actions button.danger-action:hover:not(:disabled) {
   background: rgba(185, 28, 28, 0.06);
+}
+
+.tools-drawer {
+  grid-column: 1 / -1;
+  padding: 0;
+  overflow: hidden;
+}
+
+.tools-drawer > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 12px 16px;
+  font-weight: 700;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.32);
+}
+
+.tools-drawer > summary::-webkit-details-marker {
+  display: none;
+}
+
+.tools-drawer[open] > summary {
+  border-bottom: 1px solid var(--border);
+}
+
+.nested-panel {
+  margin: 12px;
 }
 
 .joki-list .empty-state {
