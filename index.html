@@ -10,9 +10,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=20260603-focuslayout1">
+  <link rel="stylesheet" href="styles.css?v=20260603-gridlayout2">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.4.1/socket.io.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script src="app.js?v=20260603-focuslayout1" defer></script>
+  <script src="app.js?v=20260603-gridlayout2" defer></script>
 </head>
 <body>
   <div class="bg-orb orb-1"></div>
@@ -20,15 +20,6 @@
   <div class="bg-orb orb-3"></div>
 
   <div class="app">
-    <header class="hero">
-      <div>
-        <p class="eyebrow">Live Stream Toolkit</p>
-        <h1>Antrean Live</h1>
-        <p class="subtitle">Mode live fokus satu layar: antrean, gifts, dan kontrol inti.</p>
-      </div>
-      <div class="badge">Live Focus Mode</div>
-    </header>
-
     <section class="card connect-card">
       <div class="row">
         <div class="field">
@@ -53,7 +44,7 @@
     </section>
 
     <main class="grid">
-      <section class="card panel">
+      <section class="card panel queue-panel">
         <div class="panel-header">
           <div>
             <h2>Antrean</h2>
@@ -76,7 +67,7 @@
         </div>
       </section>
 
-      <section class="card panel">
+      <section class="card panel gifts-panel">
         <div class="panel-header">
           <div>
             <h2>Gifts</h2>
@@ -90,7 +81,7 @@
         <div id="giftList" class="list gift-list"></div>
       </section>
 
-      <section class="card panel compact-panel">
+      <section class="card panel compact-panel session-panel">
         <div class="panel-header">
           <div>
             <h2>Sesi Angka</h2>
@@ -114,7 +105,7 @@
         </div>
       </section>
 
-      <section class="card panel compact-panel">
+      <section class="card panel compact-panel spinner-panel">
         <div class="panel-header">
           <div>
             <h2>Spinner</h2>

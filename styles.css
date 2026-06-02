@@ -89,7 +89,7 @@ body::before {
   z-index: 1;
   max-width: 1480px;
   margin: 0 auto;
-  padding: 16px 18px 24px;
+  padding: 10px 14px 14px;
   height: 100vh;
   display: flex;
   flex-direction: column;
@@ -156,7 +156,8 @@ body::before {
 }
 
 .connect-card {
-  margin-bottom: 14px;
+  margin-bottom: 10px;
+  padding: 12px 14px;
 }
 
 .row {
@@ -273,36 +274,37 @@ button:hover:not(:disabled) {
 
 .grid {
   display: grid;
-  gap: 14px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  grid-template-columns: minmax(420px, 1.35fr) minmax(300px, 0.9fr) minmax(300px, 1fr);
   align-items: start;
   flex: 1;
   min-height: 0;
   overflow: hidden;
-  grid-template-rows: minmax(0, 1fr) minmax(0, 0.9fr) auto;
+  grid-template-rows: minmax(0, 0.98fr) minmax(0, 1fr) auto;
 }
 
-.grid > .panel:nth-child(1) {
+.queue-panel {
   grid-column: 1;
   grid-row: 1 / span 2;
   min-height: 0;
 }
 
-.grid > .panel:nth-child(2) {
-  grid-column: 2;
+.gifts-panel {
+  grid-column: 2 / span 2;
   grid-row: 1;
   min-height: 0;
 }
 
-.grid > .panel:nth-child(3) {
+.session-panel {
   grid-column: 2;
   grid-row: 2;
   min-height: 0;
 }
 
-.grid > .panel:nth-child(4) {
-  grid-column: 1 / -1;
-  grid-row: 3;
+.spinner-panel {
+  grid-column: 3;
+  grid-row: 2;
+  min-height: 0;
 }
 
 .queue-toolbar {
@@ -557,14 +559,24 @@ button:hover:not(:disabled) {
 }
 
 .compact-wheel-frame {
-  width: 220px;
-  height: 220px;
+  width: 190px;
+  height: 190px;
 }
 
 .compact-wheel-frame #wheel,
 .compact-wheel-frame canvas {
-  width: 200px;
-  height: 200px;
+  width: 170px;
+  height: 170px;
+}
+
+.spinner-panel .winner-display {
+  margin-top: 6px;
+  padding: 8px 10px;
+  font-size: 0.84rem;
+}
+
+.spinner-panel .row.wrap {
+  gap: 8px;
 }
 
 .joki-list .list-item.joki-card {
@@ -723,7 +735,7 @@ button:hover:not(:disabled) {
 
 .tools-drawer {
   grid-column: 1 / -1;
-  grid-row: 4;
+  grid-row: 3;
   padding: 0;
   overflow: hidden;
 }
