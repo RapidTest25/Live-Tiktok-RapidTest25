@@ -626,6 +626,30 @@ function resolveBackendUrl() {
   return "https://exhibits-outsourcing-ambien-lamb.trycloudflare.com";
 }
 
+function updateOverlayLink() {
+  if (!el.overlayLink) return;
+  const backendUrl = resolveBackendUrl();
+  const overlayUrl = new URL("overlay.html", window.location.href);
+  if (backendUrl) {
+    overlayUrl.searchParams.set("backend", backendUrl);
+  }
+  el.overlayLink.href = overlayUrl.toString();
+}
+
+async function syncOverlayState() {
+  const backendUrl = resolveBackendUrl();
+  if (!backendUrl || !state.lastSpinEvent) return;
+
+  try {
+    await fetch(`${backendUrl.replace(/\/$/, "")}/overlay-state`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lastSpinEvent: state.lastSpinEvent })
+    });
+  } catch (err) {
+  }
+}
+
 function ensureConnection() {
   const backendUrl = resolveBackendUrl();
   if (connection && backendUrl === activeBackendUrl) return;
@@ -1121,6 +1145,7 @@ function processGiftRules(msg) {
       finalLabel: summarizeSpinResults(spinResults, rule.poolId),
       poolId: rule.poolId || null
     };
+    syncOverlayState();
 
     addJokiQueueEntry({
       action: summarizeSpinResults(spinResults, rule.poolId),
@@ -2319,20 +2344,19 @@ function resizeWheel() {
   const canvas = el.wheel;
   const rect = canvas.getBoundingClientRect();
   const size = Math.min(rect.width, rect.height);
-  const dpr = window.devicePixelRatio || 1;
 
-  canvas.width = size * dpr;
-  canvas.height = size * dpr;
+  canvas.width = size;
+  canvas.height = size;
 
   const ctx = canvas.getContext("2d");
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
 }
 
 function drawWheel() {
   const canvas = el.wheel;
   const ctx = canvas.getContext("2d");
-  const size = canvas.width / (window.devicePixelRatio || 1);
-  const radius = size / 2 - 6;
+  const size = canvas.width;
+  const radius = size / 2 - 12;
   const center = size / 2;
 
   ctx.clearRect(0, 0, size, size);
@@ -2345,9 +2369,29 @@ function drawWheel() {
     ctx.fillStyle = "#fff1dc";
     ctx.fill();
     ctx.fillStyle = "#6d6154";
-    ctx.font = "14px Space Grotesk";
+    ctx.font = "600 24px Space Grotesk";
     ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
     ctx.fillText("Sesi kosong", center, center);
+    return;
+  }
+
+  if (entries.length === 1) {
+    ctx.beginPath();
+    ctx.arc(center, center, radius, 0, Math.PI * 2);
+    ctx.fillStyle = WHEEL_COLORS[0];
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(center, center, 56, 0, Math.PI * 2);
+    ctx.fillStyle = "#fffaf3";
+    ctx.fill();
+
+    ctx.fillStyle = "#1b1b1b";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = "700 34px Space Grotesk";
+    ctx.fillText(`#${entries[0].number}`, center, center + 2);
     return;
   }
 
@@ -2366,16 +2410,22 @@ function drawWheel() {
 
     ctx.save();
     ctx.translate(center, center);
-    ctx.rotate(start + angle / 2);
+    const mid = start + angle / 2;
+    ctx.rotate(mid);
     ctx.fillStyle = "#1b1b1b";
-    ctx.font = entries.length > 18 ? "11px Space Grotesk" : "13px Space Grotesk";
-    ctx.textAlign = "right";
-    ctx.fillText(`#${entry.number}`, radius - 12, 4);
+    ctx.font = entries.length > 18 ? "700 18px Space Grotesk" : "700 22px Space Grotesk";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.translate(radius - 42, 0);
+    if (mid > Math.PI / 2 && mid < Math.PI * 1.5) {
+      ctx.rotate(Math.PI);
+    }
+    ctx.fillText(`#${entry.number}`, 0, 0);
     ctx.restore();
   });
 
   ctx.beginPath();
-  ctx.arc(center, center, 16, 0, Math.PI * 2);
+  ctx.arc(center, center, 28, 0, Math.PI * 2);
   ctx.fillStyle = "#fffaf3";
   ctx.fill();
 }
@@ -2508,6 +2558,7 @@ function bindEvents() {
   el.exportWinnersBtn.addEventListener("click", () => downloadJSON(state.winners, "winners.json"));
   el.addRuleBtn.addEventListener("click", addGiftRuleFromForm);
   el.spinBtn.addEventListener("click", spinWheel);
+  el.backendInput.addEventListener("input", updateOverlayLink);
 
   window.addEventListener("resize", () => {
     resizeWheel();
@@ -2524,6 +2575,7 @@ function init() {
   el.toast = $("toast");
   el.usernameInput = $("usernameInput");
   el.backendInput = $("backendInput");
+  el.overlayLink = $("overlayLink");
   el.connectBtn = $("connectBtn");
   el.disconnectBtn = $("disconnectBtn");
   el.statusText = $("statusText");
@@ -2584,6 +2636,7 @@ function init() {
 
   el.usernameInput.value = state.lastUsername || "";
   el.backendInput.value = state.backendUrl || "";
+  updateOverlayLink();
   el.removeAfterSpin.checked = !!state.settings.removeAfterSpin;
   el.numberMin.value = state.settings.numberMin;
   el.numberMax.value = state.settings.numberMax;

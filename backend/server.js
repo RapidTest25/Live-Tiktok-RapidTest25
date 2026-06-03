@@ -19,6 +19,7 @@ const httpServer = createServer(app);
 
 // Bypass token cache (tokens valid for 24 hours)
 const bypassTokens = new NodeCache({ stdTTL: 86400 });
+let latestOverlayState = null;
 
 // Enable cross-origin resource sharing + proxy support (cloudflare/cloudflared)
 const io = new Server(httpServer, {
@@ -196,6 +197,19 @@ app.get('/health', (req, res) => {
         uptime: process.uptime(),
         connections: getGlobalConnectionCount()
     });
+});
+
+app.get('/overlay-state', (req, res) => {
+    res.json({
+        lastSpinEvent: latestOverlayState,
+        timestamp: Date.now()
+    });
+});
+
+app.post('/overlay-state', express.json({ limit: '64kb' }), (req, res) => {
+    const payload = req.body && typeof req.body === 'object' ? req.body.lastSpinEvent : null;
+    latestOverlayState = payload || null;
+    res.json({ ok: true });
 });
 
 // Serve frontend files

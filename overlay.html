@@ -150,6 +150,8 @@
   <script>
     const STORAGE_KEY = "tiktok_live_tool_state_v1";
     const root = document.getElementById("overlayRoot");
+    const params = new URLSearchParams(window.location.search);
+    const backendBaseUrl = (params.get("backend") || "").replace(/\/$/, "");
 
     const TYPE_COLORS = {
       golden: "golden",
@@ -164,7 +166,9 @@
       radioactive: "Radio Active"
     };
 
-    function getLatestSpinEntry() {
+    let remoteSpinEntry = null;
+
+    function getLocalSpinEntry() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
         if (!raw) return null;
@@ -173,6 +177,21 @@
       } catch (err) {
         return null;
       }
+    }
+
+    async function refreshRemoteSpinEntry() {
+      if (!backendBaseUrl) return;
+      try {
+        const response = await fetch(backendBaseUrl + "/overlay-state", { cache: "no-store" });
+        if (!response.ok) return;
+        const payload = await response.json();
+        remoteSpinEntry = payload && payload.lastSpinEvent ? payload.lastSpinEvent : null;
+      } catch (err) {
+      }
+    }
+
+    function getLatestSpinEntry() {
+      return remoteSpinEntry || getLocalSpinEntry();
     }
 
     function detectType(label) {
@@ -273,7 +292,8 @@
       }
     }
 
-    render();
+    refreshRemoteSpinEntry().finally(render);
+    setInterval(refreshRemoteSpinEntry, 1200);
     setInterval(render, 800);
     window.addEventListener("storage", render);
   </script>
