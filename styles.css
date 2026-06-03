@@ -280,7 +280,7 @@ button:hover:not(:disabled) {
   flex: 1;
   min-height: 0;
   overflow: hidden;
-  grid-template-rows: minmax(0, 0.78fr) minmax(0, 1fr) auto;
+  grid-template-rows: minmax(430px, 1fr) minmax(210px, 0.72fr) auto;
 }
 
 .queue-panel {
@@ -305,17 +305,19 @@ button:hover:not(:disabled) {
   grid-column: 2 / span 2;
   grid-row: 1;
   min-height: 0;
-  max-height: 430px;
+  max-height: none;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .spinner-shell {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(240px, 290px);
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 260px);
   gap: 12px;
   min-height: 0;
   flex: 1;
+  align-items: stretch;
 }
 
 .spinner-stage {
@@ -323,6 +325,7 @@ button:hover:not(:disabled) {
   display: flex;
   flex-direction: column;
   align-items: center;
+  min-height: 0;
 }
 
 .spinner-side {
@@ -333,6 +336,8 @@ button:hover:not(:disabled) {
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 10px 10px 8px;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .queue-toolbar {
@@ -590,29 +595,34 @@ button:hover:not(:disabled) {
 
 .compact-spinner-wrap {
   margin: 0 0 8px;
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .compact-wheel-frame {
-  width: 300px;
-  height: 300px;
+  width: 248px;
+  height: 248px;
 }
 
 .compact-wheel-frame #wheel,
 .compact-wheel-frame canvas {
-  width: 300px;
-  height: 300px;
+  width: 248px;
+  height: 248px;
 }
 
 .spinner-panel .winner-display {
   width: 100%;
   margin-top: 4px;
-  padding: 10px 12px;
-  font-size: 0.9rem;
+  padding: 8px 10px;
+  font-size: 0.84rem;
 }
 
 .spinner-panel .winner-list {
   flex: 1;
-  max-height: 248px;
+  max-height: none;
+  min-height: 0;
 }
 
 .spinner-panel .list-item {
@@ -631,6 +641,7 @@ button:hover:not(:disabled) {
 .spinner-controls-row {
   width: 100%;
   justify-content: center;
+  margin-bottom: 4px;
 }
 
 .spinner-side-footer {
@@ -642,7 +653,7 @@ button:hover:not(:disabled) {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-top: 10px;
+  margin-top: 0;
   margin-bottom: 6px;
 }
 

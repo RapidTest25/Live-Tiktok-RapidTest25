@@ -38,6 +38,17 @@ const io = new Server(httpServer, {
 // Trust proxy (required behind cloudflared/cloudflare)
 app.set('trust proxy', 1);
 
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.header('Cache-Control', 'no-store');
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(204);
+    }
+    next();
+});
+
 async function verifyRecaptcha(token) {
     const verifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${encodeURIComponent(process.env.RECAPTCHA_SECRET_KEY)}&response=${encodeURIComponent(token)}`;
     const response = await fetch(verifyUrl, { method: 'POST' });
