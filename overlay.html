@@ -50,6 +50,29 @@
       font-weight: 900;
       min-height: 1.05em;
     }
+    .roller-window {
+      position: relative;
+      height: clamp(64px, 8vw, 110px);
+      overflow: hidden;
+      margin: 16px 0 8px;
+      mask-image: linear-gradient(to bottom, transparent 0%, black 18%, black 82%, transparent 100%);
+      -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 18%, black 82%, transparent 100%);
+    }
+    .roller-track {
+      display: flex;
+      flex-direction: column;
+      transition: transform 2.3s cubic-bezier(0.12, 0.9, 0.18, 1);
+      will-change: transform;
+    }
+    .roller-item {
+      min-height: clamp(64px, 8vw, 110px);
+      display: flex;
+      align-items: center;
+      font-size: clamp(2rem, 5vw, 4rem);
+      line-height: 1.05;
+      font-weight: 900;
+      color: #f6f7fb;
+    }
     .viewer {
       font-size: clamp(1rem, 2.2vw, 1.4rem);
       color: var(--muted);
@@ -60,14 +83,6 @@
       font-size: clamp(1rem, 2vw, 1.25rem);
       color: #8fe7e0;
       font-weight: 700;
-    }
-    .spinning {
-      animation: pulse 0.18s linear infinite alternate;
-      color: #dfffb1;
-    }
-    @keyframes pulse {
-      from { transform: translateY(0) scale(1); opacity: 0.78; }
-      to { transform: translateY(-2px) scale(1.02); opacity: 1; }
     }
     .empty {
       text-align: center;
@@ -101,7 +116,7 @@
     }
 
     let lastSeenSpinKey = "";
-    let spinningTimer = null;
+    let rollTimeout = null;
 
     function renderFinal(entry) {
       const giftQty = Number(entry.giftQty) || Number(entry.qty) || 1;
@@ -125,33 +140,50 @@
         ? `${entry.giftName}${giftQty > 1 ? ` x${giftQty}` : ""}${entry.diamondCount ? ` (${entry.diamondCount}🪙)` : ""}`
         : "Gift";
 
-      let step = 0;
-      clearInterval(spinningTimer);
+      const finalLabel = entry.action || labels[labels.length - 1] || "Mutasi";
+      const sequence = [];
+      for (let i = 0; i < 14; i += 1) {
+        sequence.push(labels[i % labels.length]);
+      }
+      sequence.push(finalLabel);
+
+      clearTimeout(rollTimeout);
       root.innerHTML = `
         <div class="tag">HASIL SPIN MUTASI</div>
-        <div class="title spinning">${labels[0]}</div>
+        <div class="roller-window">
+          <div class="roller-track">
+            ${sequence.map((label) => `<div class="roller-item">${label}</div>`).join("")}
+          </div>
+        </div>
         <div class="viewer">${entry.user || "Viewer"}</div>
         <div class="gift">${giftText}</div>
       `;
 
-      const title = root.querySelector('.title');
-      spinningTimer = setInterval(() => {
-        step += 1;
-        if (title) {
-          title.textContent = labels[step % labels.length];
-        }
-      }, 110);
+      const track = root.querySelector('.roller-track');
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (track) {
+            track.style.transform = `translateY(-${(sequence.length - 1) * 100}%)`;
+          }
+        });
+      });
 
-      setTimeout(() => {
-        clearInterval(spinningTimer);
-        spinningTimer = null;
+      rollTimeout = setTimeout(() => {
+        rollTimeout = null;
         renderFinal(entry);
-      }, 2400);
+      }, 2550);
     }
 
     function render() {
       const entry = getLatestSpinEntry();
       if (!entry) {
+        clearTimeout(rollTimeout);
+        root.innerHTML = '<div class="empty">Belum ada hasil spin mutasi</div>';
+        return;
+      }
+      const lastAt = Number(entry.lastSpinAt || entry.lastAddedAt || entry.time || 0);
+      if (lastAt && Date.now() - lastAt > 10000) {
+        clearTimeout(rollTimeout);
         root.innerHTML = '<div class="empty">Belum ada hasil spin mutasi</div>';
         return;
       }
@@ -161,7 +193,7 @@
         animateSpin(entry);
         return;
       }
-      if (!spinningTimer) {
+      if (!rollTimeout) {
         renderFinal(entry);
       }
     }

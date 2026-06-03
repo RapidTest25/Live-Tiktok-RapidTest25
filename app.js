@@ -1301,13 +1301,6 @@ function renderJokiQueue() {
     queueNo.textContent = `#${String(index + 1).padStart(2, "0")}`;
     header.appendChild(queueNo);
 
-    const actionBadge = document.createElement("span");
-    actionBadge.className = "joki-action-chip";
-    actionBadge.textContent = getJokiBadgeText(entry);
-    actionBadge.title = "Klik untuk edit keterangan antrean";
-    actionBadge.addEventListener("click", () => startEditActionInline(entry.id, actionBadge));
-    header.appendChild(actionBadge);
-
     const statusBadge = document.createElement("span");
     statusBadge.className = `joki-status ${getJokiStatusClass(statusKey)}`;
     statusBadge.textContent = JOKI_STATUS_LABEL[statusKey] || JOKI_STATUS_LABEL.pending;
@@ -1330,6 +1323,21 @@ function renderJokiQueue() {
       userLine.appendChild(tiktokIdEl);
     }
     body.appendChild(userLine);
+
+    const resultLine = document.createElement("div");
+    resultLine.className = "joki-line joki-result-line";
+    const resultLabel = document.createElement("span");
+    resultLabel.className = "joki-result-label";
+    resultLabel.textContent = entry.unmatched ? "Rule:" : "Hasil:";
+    resultLine.appendChild(resultLabel);
+
+    const actionBadge = document.createElement("span");
+    actionBadge.className = "joki-action-chip";
+    actionBadge.textContent = getJokiBadgeText(entry);
+    actionBadge.title = "Klik untuk edit keterangan antrean";
+    actionBadge.addEventListener("click", () => startEditActionInline(entry.id, actionBadge));
+    resultLine.appendChild(actionBadge);
+    body.appendChild(resultLine);
 
     const infoLine = document.createElement("div");
     infoLine.className = "joki-line joki-info-line";

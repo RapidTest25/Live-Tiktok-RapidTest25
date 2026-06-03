@@ -476,15 +476,14 @@ button:hover:not(:disabled) {
   align-items: center;
   max-width: 100%;
   min-width: 0;
-  padding: 6px 12px;
+  padding: 5px 10px;
   border-radius: 10px;
   background: #8fc64f;
   color: #183404;
-  font-size: 0.82rem;
+  font-size: 0.76rem;
   font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  line-height: 1.25;
   cursor: pointer;
 }
 
@@ -699,8 +698,21 @@ button:hover:not(:disabled) {
   grid-area: body;
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 3px;
   min-width: 0;
+}
+
+.joki-result-line {
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.joki-result-label {
+  color: #6d6154;
+  font-size: 0.76rem;
+  font-weight: 700;
+  flex: 0 0 auto;
+  padding-top: 3px;
 }
 
 .joki-list .list-item.joki-card > .joki-actions {
@@ -722,7 +734,7 @@ button:hover:not(:disabled) {
 }
 
 .joki-display-name {
-  font-size: 0.84rem;
+  font-size: 0.9rem;
 }
 
 .joki-tiktok-id,
