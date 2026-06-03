@@ -201,7 +201,21 @@ app.get('/health', (req, res) => {
 // Serve frontend files
 app.use(express.static('public'));
 
-// Start http listener
+// Start http listener - try IPv6 first (cloudflared uses [::1]), fallback to IPv4
 const port = process.env.PORT || 8081;
-httpServer.listen(port);
-console.info(`Server running! Please visit http://localhost:${port}`);
+
+function onListen(host) {
+    console.info(`✅ Server running on ${host}:${port}`);
+    console.info(`   Local:  http://localhost:${port}`);
+    console.info(`   Health: http://localhost:${port}/health`);
+}
+
+httpServer.listen(port, '::', () => onListen('::'));
+httpServer.once('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+        console.error(`❌ Port ${port} already in use`);
+        process.exit(1);
+    }
+    console.warn(`⚠️  IPv6 (::) failed (${err.code}), trying 0.0.0.0...`);
+    httpServer.listen(port, '0.0.0.0', () => onListen('0.0.0.0'));
+});
