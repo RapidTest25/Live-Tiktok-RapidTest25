@@ -178,13 +178,13 @@
       const entry = getLatestSpinEntry();
       if (!entry) {
         clearTimeout(rollTimeout);
-        root.innerHTML = '<div class="empty">Belum ada hasil spin mutasi</div>';
+        root.innerHTML = '<div class="empty">Spin untuk Random mutasi</div>';
         return;
       }
       const lastAt = Number(entry.lastSpinAt || entry.lastAddedAt || entry.time || 0);
       if (lastAt && Date.now() - lastAt > 10000) {
         clearTimeout(rollTimeout);
-        root.innerHTML = '<div class="empty">Belum ada hasil spin mutasi</div>';
+        root.innerHTML = '<div class="empty">Spin untuk Random mutasi</div>';
         return;
       }
       const spinKey = `${entry.id}:${entry.lastSpinAt || entry.lastAddedAt || entry.time || 0}:${entry.action || ''}`;

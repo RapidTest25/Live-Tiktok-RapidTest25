@@ -1253,9 +1253,11 @@ function renderJokiQueue() {
   }
 
   const search = normalizeKey(jokiSearchQuery);
-  const sorted = state.jokiQueue
+  const sortedAll = state.jokiQueue
     .slice()
-    .sort((a, b) => (a.time || 0) - (b.time || 0))
+    .sort((a, b) => (a.time || 0) - (b.time || 0));
+  const queueNumberById = new Map(sortedAll.map((entry, index) => [entry.id, index + 1]));
+  const sorted = sortedAll
     .filter((entry) => {
       if (!search) return true;
       const haystack = [
@@ -1279,7 +1281,7 @@ function renderJokiQueue() {
     return;
   }
 
-  sorted.forEach((entry, index) => {
+  sorted.forEach((entry) => {
     const row = document.createElement("div");
     const statusKey = entry.status || "pending";
     row.className = `list-item joki-card status-${getJokiStatusClass(statusKey)}`;
@@ -1298,7 +1300,7 @@ function renderJokiQueue() {
 
     const queueNo = document.createElement("span");
     queueNo.className = "joki-queue-no";
-    queueNo.textContent = `#${String(index + 1).padStart(2, "0")}`;
+    queueNo.textContent = `#${String(queueNumberById.get(entry.id) || 0).padStart(2, "0")}`;
     header.appendChild(queueNo);
 
     const statusBadge = document.createElement("span");
