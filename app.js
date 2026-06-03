@@ -116,6 +116,7 @@ const state = {
   giftRules: [],
   spinPools: [],
   giftProgress: {},
+  lastSpinEvent: null,
   settings: {
     autoAddFromChat: false,
     removeAfterSpin: true,
@@ -356,6 +357,7 @@ function saveState() {
     giftRules: state.giftRules,
     spinPools: state.spinPools,
     giftProgress: state.giftProgress,
+    lastSpinEvent: state.lastSpinEvent,
     settings: state.settings,
     nextNumber: state.nextNumber,
     lastUsername: state.lastUsername,
@@ -377,6 +379,7 @@ function loadState() {
       ? parsed.spinPools
       : DEFAULT_SPIN_POOLS.map((pool) => ({ ...pool, items: pool.items.map((item) => ({ ...item })) }));
     state.giftProgress = parsed.giftProgress && typeof parsed.giftProgress === "object" ? parsed.giftProgress : {};
+    state.lastSpinEvent = parsed.lastSpinEvent || null;
     
     // Migrate old whitelist data to jokiQueue
     if (Array.isArray(parsed.whitelist) && parsed.whitelist.length > 0) {
@@ -1062,11 +1065,27 @@ function processGiftRules(msg) {
   const fireSpinRule = (rule, spinQty) => {
     if (spinQty <= 0) return;
     const spinResults = {};
+    const rollSequence = [];
     for (let i = 0; i < spinQty; i += 1) {
       const rolled = rollWeightedPool(rule.poolId);
       const label = rolled ? rolled.label : "Mutasi";
       spinResults[label] = (spinResults[label] || 0) + 1;
+      rollSequence.push(label);
     }
+
+    state.lastSpinEvent = {
+      id: generateId("spinEvent"),
+      time: Date.now(),
+      user: getDisplayLabel(msg),
+      tiktokId: msg.uniqueId || null,
+      giftName: msg.giftName || "gift",
+      giftQty: spinQty,
+      diamondCount: diamondCount * spinQty,
+      spinResults,
+      rollSequence,
+      finalLabel: summarizeSpinResults(spinResults, rule.poolId),
+      poolId: rule.poolId || null
+    };
 
     addJokiQueueEntry({
       action: summarizeSpinResults(spinResults, rule.poolId),
