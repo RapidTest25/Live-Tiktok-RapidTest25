@@ -3,6 +3,7 @@ const MAX_CHAT_ITEMS = 200;
 const MAX_GIFT_ITEMS = 120;
 const MAX_SESSION_ITEMS = 300;
 const MAX_JOKI_ITEMS = 200;
+const SPIN_RESULT_REVEAL_MS = 3200;
 const WHEEL_COLORS = [
   "#ffb703",
   "#0f9d92",
@@ -1211,6 +1212,10 @@ function processGiftRules(msg) {
       ruleId: rule.id || null,
       unitCount: Number(rule.unitCount) || 1
     });
+
+    setTimeout(() => {
+      renderJokiQueue();
+    }, SPIN_RESULT_REVEAL_MS + 100);
   };
 
   const processRule = (rule, options) => {
@@ -1541,6 +1546,9 @@ function formatActionDisplay(action, qty) {
 
 function getJokiBadgeText(entry) {
   if (entry.rewardMode === "spin" && entry.spinResults) {
+    if (entry.lastSpinAt && Date.now() - entry.lastSpinAt < SPIN_RESULT_REVEAL_MS) {
+      return "Sedang spin...";
+    }
     return summarizeSpinResults(entry.spinResults, entry.poolId);
   }
   if (entry.unmatched) {

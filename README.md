@@ -47,6 +47,7 @@ npx serve .
 - `app.js` — semua logic (chat handler, gift rules, antrean, spinner, dll)
 - `styles.css` — styling
 - `backend/` — server opsional (berbasis [TikTok-Chat-Reader](https://github.com/zerodytrash/TikTok-Chat-Reader))
+- `backend/windows/` — helper auto-run Windows RDP (Task Scheduler, NSSM, PM2)
 
 ## Tech
 
