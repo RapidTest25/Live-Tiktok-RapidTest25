@@ -144,22 +144,31 @@ const el = {};
 
 class TikTokIOConnection {
   constructor(backendUrl) {
-    this.socket = io(backendUrl, {
-      transports: ["polling", "websocket"],
-      upgrade: true,
-      reconnection: true,
-      reconnectionAttempts: 2,
-      timeout: 15000
-    });
+    this.backendUrl = backendUrl;
+    this.socket = null;
     this.uniqueId = null;
     this.options = null;
+  }
 
+  _createSocket() {
+    if (this.socket) {
+      this.socket.removeAllListeners();
+      this.socket.disconnect();
+      this.socket = null;
+    }
+    this.socket = io(this.backendUrl, {
+      transports: ["polling"],
+      upgrade: true,
+      reconnection: false,
+      timeout: 20000,
+      forceNew: true,
+      multiplex: false
+    });
     this.socket.on("connect", () => {
       if (this.uniqueId) {
         this.socket.emit("setUniqueId", this.uniqueId, this.options || {});
       }
     });
-
     this.socket.on("tiktokDisconnected", (errMsg) => {
       if (errMsg && errMsg.includes("LIVE has ended")) {
         this.uniqueId = null;
@@ -171,33 +180,49 @@ class TikTokIOConnection {
     this.uniqueId = uniqueId;
     this.options = options || {};
 
+    this._createSocket();
+
     return new Promise((resolve, reject) => {
-      this.socket.off("tiktokConnected");
-      this.socket.off("tiktokDisconnected");
+      let settled = false;
 
       const cleanup = () => {
         this.socket.off("tiktokConnected", onConnected);
         this.socket.off("tiktokDisconnected", onDisconnected);
+        this.socket.off("connect_error", onConnectError);
         clearTimeout(timeoutId);
       };
 
       const onConnected = (state) => {
+        if (settled) return;
+        settled = true;
         cleanup();
         resolve(state);
       };
 
       const onDisconnected = (errMsg) => {
+        if (settled) return;
+        settled = true;
         cleanup();
         reject(errMsg);
       };
 
+      const onConnectError = (err) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        reject(err && err.message ? err.message : "Backend tidak bisa dihubungi");
+      };
+
       this.socket.once("tiktokConnected", onConnected);
       this.socket.once("tiktokDisconnected", onDisconnected);
+      this.socket.once("connect_error", onConnectError);
 
       const timeoutId = setTimeout(() => {
+        if (settled) return;
+        settled = true;
         cleanup();
-        reject("Connection Timeout");
-      }, 15000);
+        reject("Connection Timeout - pastikan backend berjalan dan URL benar");
+      }, 20000);
 
       this.socket.emit("setUniqueId", this.uniqueId, this.options);
     });
@@ -205,15 +230,23 @@ class TikTokIOConnection {
 
   disconnect() {
     this.uniqueId = null;
-    this.socket.emit("disconnect_tiktok");
+    if (this.socket) {
+      this.socket.emit("disconnect_tiktok");
+    }
   }
 
   destroy() {
-    this.socket.disconnect();
+    if (this.socket) {
+      this.socket.removeAllListeners();
+      this.socket.disconnect();
+      this.socket = null;
+    }
   }
 
   on(eventName, handler) {
-    this.socket.on(eventName, handler);
+    if (this.socket) {
+      this.socket.on(eventName, handler);
+    }
   }
 }
 
@@ -586,7 +619,7 @@ function setConnectionState(stateName) {
 function resolveBackendUrl() {
   const custom = el.backendInput.value.trim();
   if (custom) return custom;
-  return "https://enforcement-lap-signal-fat.trycloudflare.com/";
+  return "https://live.aksocialboost.my.id";
 }
 
 function ensureConnection() {
@@ -1323,44 +1356,29 @@ function renderJokiQueue() {
     const statusBadge = document.createElement("span");
     statusBadge.className = `joki-status ${getJokiStatusClass(statusKey)}`;
     statusBadge.textContent = JOKI_STATUS_LABEL[statusKey] || JOKI_STATUS_LABEL.pending;
-
     header.appendChild(statusBadge);
 
     const body = document.createElement("div");
     body.className = "joki-body";
 
-    const userLine = document.createElement("div");
-    userLine.className = "joki-line joki-user-line";
     const displayName = document.createElement("span");
     displayName.className = "joki-display-name";
     displayName.textContent = entry.user;
-    userLine.appendChild(displayName);
+    body.appendChild(displayName);
+
     if (entry.tiktokId && !String(entry.user || "").includes(`@${entry.tiktokId}`)) {
       const tiktokIdEl = document.createElement("span");
       tiktokIdEl.className = "joki-tiktok-id";
-      tiktokIdEl.textContent = `(@${entry.tiktokId})`;
-      userLine.appendChild(tiktokIdEl);
+      tiktokIdEl.textContent = `@${entry.tiktokId}`;
+      body.appendChild(tiktokIdEl);
     }
-    body.appendChild(userLine);
-
-    const resultLine = document.createElement("div");
-    resultLine.className = "joki-line joki-result-line";
-    const resultLabel = document.createElement("span");
-    resultLabel.className = "joki-result-label";
-    resultLabel.textContent = entry.unmatched ? "Rule:" : "Hasil:";
-    resultLine.appendChild(resultLabel);
 
     const actionBadge = document.createElement("span");
     actionBadge.className = "joki-action-chip";
     actionBadge.textContent = getJokiBadgeText(entry);
     actionBadge.title = "Klik untuk edit keterangan antrean";
     actionBadge.addEventListener("click", () => startEditActionInline(entry.id, actionBadge));
-    resultLine.appendChild(actionBadge);
-    body.appendChild(resultLine);
-
-    const infoLine = document.createElement("div");
-    infoLine.className = "joki-line joki-info-line";
-    infoLine.dataset.entryId = entry.id;
+    body.appendChild(actionBadge);
 
     if (entry.giftName && entry.giftName !== "-") {
       const giftEl = document.createElement("span");
@@ -1369,64 +1387,23 @@ function renderJokiQueue() {
       const qtyText = giftQty > 1 ? ` x${giftQty}` : "";
       const diamondLabel = entry.diamondCount ? ` (${entry.diamondCount}🪙)` : "";
       giftEl.textContent = `${entry.giftName}${qtyText}${diamondLabel}`;
-      infoLine.appendChild(giftEl);
+      body.appendChild(giftEl);
     }
-
-    const robloxSep = document.createElement("span");
-    robloxSep.className = "joki-sep";
-    robloxSep.textContent = "—";
-    infoLine.appendChild(robloxSep);
-
-    const robloxLabel = document.createElement("span");
-    robloxLabel.className = "joki-roblox-label";
-    robloxLabel.textContent = "Roblox:";
-    infoLine.appendChild(robloxLabel);
 
     if (entry.username) {
       const robloxValue = document.createElement("span");
       robloxValue.className = "joki-roblox-value";
       robloxValue.textContent = entry.username;
-      robloxValue.title = "Klik untuk edit";
+      robloxValue.title = "Roblox — Klik untuk edit";
       robloxValue.addEventListener("click", () => startEditRobloxInline(entry.id, robloxValue));
-      infoLine.appendChild(robloxValue);
+      body.appendChild(robloxValue);
     } else {
       const addRobloxBtn = document.createElement("span");
       addRobloxBtn.className = "joki-roblox-value joki-roblox-empty";
-      addRobloxBtn.textContent = "+ tambah";
+      addRobloxBtn.textContent = "+ Roblox";
       addRobloxBtn.addEventListener("click", () => startEditRobloxInline(entry.id, addRobloxBtn));
-      infoLine.appendChild(addRobloxBtn);
+      body.appendChild(addRobloxBtn);
     }
-
-    body.appendChild(infoLine);
-
-    const notesLine = document.createElement("div");
-    notesLine.className = "joki-line joki-notes-line";
-    const notesLabel = document.createElement("span");
-    notesLabel.className = "joki-notes-label";
-    notesLabel.textContent = "Catatan:";
-    notesLine.appendChild(notesLabel);
-    const notesText = document.createElement("span");
-    notesText.className = "joki-notes-text";
-    notesText.setAttribute("contenteditable", "true");
-    notesText.setAttribute("spellcheck", "false");
-    notesText.setAttribute("data-placeholder", "klik untuk tambah catatan brainrot");
-    notesText.textContent = entry.notes || "";
-    notesText.addEventListener("input", () => {
-      const txt = notesText.textContent || "";
-      const e2 = state.jokiQueue.find((x) => x.id === entry.id);
-      if (e2) e2.notes = txt;
-    });
-    notesText.addEventListener("blur", () => {
-      saveState();
-    });
-    notesText.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        notesText.blur();
-      }
-    });
-    notesLine.appendChild(notesText);
-    body.appendChild(notesLine);
 
     const actionsWrap = document.createElement("div");
     actionsWrap.className = "joki-actions";
@@ -1434,30 +1411,23 @@ function renderJokiQueue() {
     const statusBtn = document.createElement("button");
     if (statusKey === "done") {
       statusBtn.className = "ghost small";
-      statusBtn.textContent = "Buka Lagi";
+      statusBtn.textContent = "Buka";
     } else if (statusKey === "awaitingDelivery") {
       statusBtn.className = "primary-action";
-      statusBtn.textContent = "Tutup Order";
+      statusBtn.textContent = "Tutup";
     } else if (statusKey === "inProgress") {
       statusBtn.className = "primary-action";
-      statusBtn.textContent = "Belum Dikirim";
+      statusBtn.textContent = "Kirim";
     } else {
       statusBtn.className = "primary-action";
-      statusBtn.textContent = "Mulai Proses";
+      statusBtn.textContent = "Proses";
     }
     statusBtn.addEventListener("click", () => cycleJokiStatus(entry.id));
 
-    const editUsernameBtn = document.createElement("button");
-    editUsernameBtn.className = "ghost small";
-    editUsernameBtn.textContent = "Edit Roblox";
-    editUsernameBtn.addEventListener("click", () => {
-      const target = row.querySelector(".joki-roblox-value") || row.querySelector(".joki-roblox-empty");
-      if (target) startEditRobloxInline(entry.id, target);
-    });
-
     const removeBtn = document.createElement("button");
     removeBtn.className = "ghost small danger-action";
-    removeBtn.textContent = "Hapus";
+    removeBtn.textContent = "✕";
+    removeBtn.title = "Hapus dari antrean";
     removeBtn.addEventListener("click", () => {
       showConfirm(
         "Hapus Entri Ini?",
@@ -1468,9 +1438,6 @@ function renderJokiQueue() {
     });
 
     actionsWrap.appendChild(statusBtn);
-    if (entry.username) {
-      actionsWrap.appendChild(editUsernameBtn);
-    }
     actionsWrap.appendChild(removeBtn);
 
     row.appendChild(header);
@@ -2092,27 +2059,18 @@ function startEditRobloxInline(entryId, targetEl) {
   const entry = state.jokiQueue.find((e) => e.id === entryId);
   if (!entry || !targetEl) return;
 
-  const infoLine = targetEl.closest(".joki-info-line");
-  if (!infoLine) return;
-
-  if (infoLine.querySelector(".joki-roblox-input")) return;
+  const body = targetEl.closest(".joki-body");
+  if (!body || body.querySelector(".joki-roblox-input")) return;
 
   const original = targetEl;
   const originalText = entry.username || "";
-
-  infoLine.classList.add("editing");
-
-  const staticParts = [];
-  infoLine.querySelectorAll(".joki-gift, .joki-sep, .joki-roblox-label").forEach((el) => {
-    staticParts.push(el);
-  });
-  staticParts.forEach((el) => (el.style.display = "none"));
 
   const input = document.createElement("input");
   input.type = "text";
   input.value = originalText;
   input.placeholder = "username Roblox";
   input.className = "joki-roblox-input";
+  input.style.cssText = "font-size:0.72rem;font-weight:700;color:#08574f;background:#fff;border:1.5px solid rgba(15,157,146,0.5);border-radius:4px;padding:1px 5px;outline:none;width:100px;flex:0 0 auto;";
   input.autocomplete = "off";
   input.spellcheck = false;
 
@@ -2121,12 +2079,14 @@ function startEditRobloxInline(entryId, targetEl) {
   saveBtn.textContent = "✓";
   saveBtn.title = "Simpan (Enter)";
   saveBtn.type = "button";
+  saveBtn.style.cssText = "font-size:0.7rem;padding:1px 5px;border-radius:4px;background:var(--accent-2);color:#fff;border:none;cursor:pointer;flex:0 0 auto;";
 
   const cancelBtn = document.createElement("button");
   cancelBtn.className = "joki-roblox-cancel";
   cancelBtn.textContent = "✕";
   cancelBtn.title = "Batal (Esc)";
   cancelBtn.type = "button";
+  cancelBtn.style.cssText = "font-size:0.7rem;padding:1px 5px;border-radius:4px;background:transparent;color:var(--muted);border:1px solid var(--border);cursor:pointer;flex:0 0 auto;";
 
   original.replaceWith(input);
   input.insertAdjacentElement("afterend", saveBtn);
@@ -2177,17 +2137,17 @@ function startEditActionInline(entryId, targetEl) {
   const entry = state.jokiQueue.find((e) => e.id === entryId);
   if (!entry || !targetEl) return;
 
-  const header = targetEl.closest(".joki-header");
-  if (!header || header.querySelector(".joki-action-input")) return;
+  const body = targetEl.closest(".joki-body");
+  if (!body || body.querySelector(".joki-action-input")) return;
 
   const originalText = entry.unmatched ? "" : (entry.action || "");
-  header.classList.add("editing-action");
 
   const input = document.createElement("input");
   input.type = "text";
   input.value = originalText;
-  input.placeholder = "isi keterangan antrean";
+  input.placeholder = "keterangan antrean";
   input.className = "joki-action-input";
+  input.style.cssText = "font-size:0.7rem;font-weight:600;color:#183404;background:#fff;border:1.5px solid rgba(143,198,79,0.5);border-radius:4px;padding:2px 5px;outline:none;width:120px;flex:0 0 auto;";
   input.autocomplete = "off";
   input.spellcheck = false;
 
@@ -2196,12 +2156,14 @@ function startEditActionInline(entryId, targetEl) {
   saveBtn.textContent = "✓";
   saveBtn.type = "button";
   saveBtn.title = "Simpan (Enter)";
+  saveBtn.style.cssText = "font-size:0.7rem;padding:2px 5px;border-radius:4px;background:#8fc64f;color:#183404;border:none;cursor:pointer;flex:0 0 auto;";
 
   const cancelBtn = document.createElement("button");
   cancelBtn.className = "joki-action-cancel";
   cancelBtn.textContent = "✕";
   cancelBtn.type = "button";
   cancelBtn.title = "Batal (Esc)";
+  cancelBtn.style.cssText = "font-size:0.7rem;padding:2px 5px;border-radius:4px;background:transparent;color:var(--muted);border:1px solid var(--border);cursor:pointer;flex:0 0 auto;";
 
   targetEl.replaceWith(input);
   input.insertAdjacentElement("afterend", saveBtn);

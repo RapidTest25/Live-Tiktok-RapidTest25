@@ -5,6 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Overlay Mutasi</title>
   <style>
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 0.6; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.05); }
+    }
+    @keyframes shimmer {
+      0% { background-position: -200% center; }
+      100% { background-position: 200% center; }
+    }
+    @keyframes fadeSlideUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes popIn {
+      0% { opacity: 0; transform: scale(0.7); }
+      70% { transform: scale(1.08); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
     :root {
       color-scheme: dark;
       --bg: rgba(0, 0, 0, 0);
@@ -13,10 +31,13 @@
       --muted: rgba(255, 255, 255, 0.72);
       --accent: #8fc64f;
       --accent-2: #3b82f6;
+      --golden: #ffd700;
+      --diamond: #4fc3f7;
+      --plasma: #ce93d8;
+      --radioactive: #69f0ae;
     }
-    * { box-sizing: border-box; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      margin: 0;
       min-height: 100vh;
       background: var(--bg);
       font-family: "Segoe UI", system-ui, sans-serif;
@@ -42,6 +63,7 @@
       font-weight: 700;
       letter-spacing: 0.4px;
       font-size: 0.92rem;
+      animation: fadeSlideUp 0.4s ease;
     }
     .title {
       margin: 16px 0 8px;
@@ -49,40 +71,69 @@
       line-height: 1.05;
       font-weight: 900;
       min-height: 1.05em;
+      animation: popIn 0.5s cubic-bezier(0.12, 0.9, 0.3, 1);
     }
+    .title.golden { color: var(--golden); text-shadow: 0 0 30px rgba(255,215,0,0.5); }
+    .title.diamond { color: var(--diamond); text-shadow: 0 0 30px rgba(79,195,247,0.5); }
+    .title.plasma { color: var(--plasma); text-shadow: 0 0 30px rgba(206,147,216,0.5); }
+    .title.radioactive { color: var(--radioactive); text-shadow: 0 0 30px rgba(105,240,174,0.5); }
     .roller-window {
       position: relative;
       height: clamp(64px, 8vw, 110px);
       overflow: hidden;
       margin: 16px 0 8px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
       mask-image: linear-gradient(to bottom, transparent 0%, black 18%, black 82%, transparent 100%);
       -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 18%, black 82%, transparent 100%);
+    }
+    .roller-window::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      transform: translateY(-50%);
+      z-index: 2;
+      opacity: 0.7;
     }
     .roller-track {
       display: flex;
       flex-direction: column;
-      transition: transform 2.3s cubic-bezier(0.12, 0.9, 0.18, 1);
+      transition: transform 2.4s cubic-bezier(0.08, 0.82, 0.16, 1);
       will-change: transform;
     }
     .roller-item {
       min-height: clamp(64px, 8vw, 110px);
       display: flex;
       align-items: center;
+      justify-content: center;
       font-size: clamp(2rem, 5vw, 4rem);
       line-height: 1.05;
       font-weight: 900;
       color: #f6f7fb;
+      padding-left: 20px;
+      transition: color 0.3s;
     }
+    .roller-item[data-type="golden"] { color: var(--golden); text-shadow: 0 0 15px rgba(255,215,0,0.3); }
+    .roller-item[data-type="diamond"] { color: var(--diamond); text-shadow: 0 0 15px rgba(79,195,247,0.3); }
+    .roller-item[data-type="plasma"] { color: var(--plasma); text-shadow: 0 0 15px rgba(206,147,216,0.3); }
+    .roller-item[data-type="radioactive"] { color: var(--radioactive); text-shadow: 0 0 15px rgba(105,240,174,0.3); }
     .viewer {
       font-size: clamp(1rem, 2.2vw, 1.4rem);
       color: var(--muted);
       margin-bottom: 14px;
       font-weight: 600;
+      animation: fadeSlideUp 0.4s ease 0.1s both;
     }
     .gift {
       font-size: clamp(1rem, 2vw, 1.25rem);
       color: #8fe7e0;
       font-weight: 700;
+      animation: fadeSlideUp 0.4s ease 0.2s both;
     }
     .empty {
       text-align: center;
@@ -94,11 +145,24 @@
 </head>
 <body>
   <div class="wrap" id="overlayRoot">
-    <div class="empty">Belum ada hasil spin mutasi</div>
+    <div class="empty">Spin untuk Random mutasi</div>
   </div>
   <script>
     const STORAGE_KEY = "tiktok_live_tool_state_v1";
     const root = document.getElementById("overlayRoot");
+
+    const TYPE_COLORS = {
+      golden: "golden",
+      diamond: "diamond",
+      plasma: "plasma",
+      radioactive: "radioactive"
+    };
+    const TYPE_LABELS = {
+      golden: "Golden",
+      diamond: "Diamond",
+      plasma: "Plasma",
+      radioactive: "Radio Active"
+    };
 
     function getLatestSpinEntry() {
       try {
@@ -111,21 +175,31 @@
       }
     }
 
+    function detectType(label) {
+      if (!label) return "";
+      const lower = label.toLowerCase();
+      if (lower.includes("golden")) return "golden";
+      if (lower.includes("diamond")) return "diamond";
+      if (lower.includes("plasma")) return "plasma";
+      if (lower.includes("radio") || lower.includes("active")) return "radioactive";
+      return "";
+    }
+
     let lastSeenSpinKey = "";
     let rollTimeout = null;
 
     function renderFinal(entry) {
       const giftQty = Number(entry.giftQty) || 1;
       const giftText = entry.giftName && entry.giftName !== "-"
-        ? `${entry.giftName}${giftQty > 1 ? ` x${giftQty}` : ""}${entry.diamondCount ? ` (${entry.diamondCount}🪙)` : ""}`
+        ? entry.giftName + (giftQty > 1 ? " x" + giftQty : "") + (entry.diamondCount ? " (" + entry.diamondCount + "\uD83E\uDE99)" : "")
         : "Gift";
+      const type = detectType(entry.finalLabel);
 
-      root.innerHTML = `
-        <div class="tag">HASIL SPIN MUTASI</div>
-        <div class="title">${entry.finalLabel || entry.action || "Mutasi"}</div>
-        <div class="viewer">${entry.user || "Viewer"}</div>
-        <div class="gift">${giftText}</div>
-      `;
+      root.innerHTML =
+        '<div class="tag">HASIL SPIN MUTASI</div>' +
+        '<div class="title' + (type ? " " + type : "") + '">' + (entry.finalLabel || entry.action || "Mutasi") + '</div>' +
+        '<div class="viewer">' + (entry.user || "Viewer") + '</div>' +
+        '<div class="gift">' + giftText + '</div>';
     }
 
     function animateSpin(entry) {
@@ -135,58 +209,60 @@
         : baseLabels;
       const giftQty = Number(entry.giftQty) || 1;
       const giftText = entry.giftName && entry.giftName !== "-"
-        ? `${entry.giftName}${giftQty > 1 ? ` x${giftQty}` : ""}${entry.diamondCount ? ` (${entry.diamondCount}🪙)` : ""}`
+        ? entry.giftName + (giftQty > 1 ? " x" + giftQty : "") + (entry.diamondCount ? " (" + entry.diamondCount + "\uD83E\uDE99)" : "")
         : "Gift";
 
       const finalLabel = entry.finalLabel || labels[labels.length - 1] || "Mutasi";
       const sequence = [];
       const spinSource = labels.length > 1 ? labels : baseLabels;
-      for (let i = 0; i < 16; i += 1) {
+      for (let i = 0; i < 20; i += 1) {
         sequence.push(spinSource[i % spinSource.length]);
       }
       sequence.push(finalLabel);
 
       clearTimeout(rollTimeout);
-      root.innerHTML = `
-        <div class="tag">HASIL SPIN MUTASI</div>
-        <div class="roller-window">
-          <div class="roller-track">
-            ${sequence.map((label) => `<div class="roller-item">${label}</div>`).join("")}
-          </div>
-        </div>
-        <div class="viewer">${entry.user || "Viewer"}</div>
-        <div class="gift">${giftText}</div>
-      `;
+      root.innerHTML =
+        '<div class="tag">HASIL SPIN MUTASI</div>' +
+        '<div class="roller-window">' +
+        '<div class="roller-track">' +
+        sequence.map(function(label) {
+          var t = detectType(label);
+          return '<div class="roller-item" data-type="' + t + '">' + label + '</div>';
+        }).join("") +
+        '</div>' +
+        '</div>' +
+        '<div class="viewer">' + (entry.user || "Viewer") + '</div>' +
+        '<div class="gift">' + giftText + '</div>';
 
-      const track = root.querySelector('.roller-track');
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
+      var track = root.querySelector('.roller-track');
+      requestAnimationFrame(function() {
+        requestAnimationFrame(function() {
           if (track) {
-            track.style.transform = `translateY(-${(sequence.length - 1) * 100}%)`;
+            track.style.transform = "translateY(-" + (sequence.length - 1) * 100 + "%)";
           }
         });
       });
 
-      rollTimeout = setTimeout(() => {
+      rollTimeout = setTimeout(function() {
         rollTimeout = null;
         renderFinal(entry);
-      }, 2550);
+      }, 2650);
     }
 
     function render() {
-      const entry = getLatestSpinEntry();
+      var entry = getLatestSpinEntry();
       if (!entry) {
         clearTimeout(rollTimeout);
         root.innerHTML = '<div class="empty">Spin untuk Random mutasi</div>';
         return;
       }
-      const lastAt = Number(entry.time || 0);
+      var lastAt = Number(entry.time || 0);
       if (lastAt && Date.now() - lastAt > 10000) {
         clearTimeout(rollTimeout);
         root.innerHTML = '<div class="empty">Spin untuk Random mutasi</div>';
         return;
       }
-      const spinKey = `${entry.id}:${entry.time || 0}:${entry.finalLabel || ''}`;
+      var spinKey = entry.id + ":" + (entry.time || 0) + ":" + (entry.finalLabel || "");
       if (spinKey !== lastSeenSpinKey) {
         lastSeenSpinKey = spinKey;
         animateSpin(entry);

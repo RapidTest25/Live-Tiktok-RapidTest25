@@ -20,12 +20,22 @@ const httpServer = createServer(app);
 // Bypass token cache (tokens valid for 24 hours)
 const bypassTokens = new NodeCache({ stdTTL: 86400 });
 
-// Enable cross-origin resource sharing
+// Enable cross-origin resource sharing + proxy support (cloudflare/cloudflared)
 const io = new Server(httpServer, {
     cors: {
-        origin: '*'
-    }
+        origin: '*',
+        methods: ['GET', 'POST']
+    },
+    transports: ['polling', 'websocket'],
+    allowUpgrades: true,
+    perMessageDeflate: false,
+    httpCompression: false,
+    pingTimeout: 20000,
+    pingInterval: 25000
 });
+
+// Trust proxy (required behind cloudflared/cloudflare)
+app.set('trust proxy', 1);
 
 async function verifyRecaptcha(token) {
     const verifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${encodeURIComponent(process.env.RECAPTCHA_SECRET_KEY)}&response=${encodeURIComponent(token)}`;
@@ -176,6 +186,16 @@ app.post('/generate-overlay-token', express.json(), async (req, res) => {
         console.error('reCAPTCHA verification error:', err);
         return res.status(500).json({ error: 'Verification error' });
     }
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+    res.json({
+        status: 'ok',
+        timestamp: Date.now(),
+        uptime: process.uptime(),
+        connections: getGlobalConnectionCount()
+    });
 });
 
 // Serve frontend files

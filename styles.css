@@ -464,12 +464,12 @@ button:hover:not(:disabled) {
 .joki-status {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.76rem;
+  gap: 4px;
+  font-size: 0.68rem;
   font-weight: 600;
   white-space: nowrap;
-  padding: 5px 10px 5px 9px;
-  border-radius: 8px;
+  padding: 2px 7px 2px 6px;
+  border-radius: 6px;
   flex-shrink: 0;
   border: 1px solid transparent;
 }
@@ -477,30 +477,33 @@ button:hover:not(:disabled) {
 .joki-action-chip {
   display: inline-flex;
   align-items: center;
-  max-width: 100%;
+  max-width: 160px;
   min-width: 0;
-  padding: 5px 10px;
-  border-radius: 10px;
+  padding: 2px 7px;
+  border-radius: 6px;
   background: #8fc64f;
   color: #183404;
-  font-size: 0.76rem;
+  font-size: 0.7rem;
   font-weight: 600;
-  white-space: normal;
-  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .joki-queue-no {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 42px;
-  padding: 4px 8px;
-  border-radius: 999px;
+  min-width: 30px;
+  padding: 2px 5px;
+  border-radius: 6px;
   background: rgba(15, 157, 146, 0.08);
   color: #0a6b63;
-  font-size: 0.76rem;
+  font-size: 0.68rem;
   font-weight: 700;
+  flex-shrink: 0;
 }
 
 .joki-action-chip:hover {
@@ -509,8 +512,8 @@ button:hover:not(:disabled) {
 
 .joki-status::before {
   content: "";
-  width: 7px;
-  height: 7px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   background: currentColor;
   flex-shrink: 0;
@@ -541,7 +544,7 @@ button:hover:not(:disabled) {
 }
 
 .joki-list {
-  max-height: min(72vh, 860px);
+  max-height: min(70vh, 700px);
 }
 
 .compact-list {
@@ -620,23 +623,18 @@ button:hover:not(:disabled) {
 }
 
 .joki-list .list-item.joki-card {
-  display: grid;
-  grid-template-areas:
-    "header"
-    "body"
-    "actions";
-  grid-template-columns: 1fr;
-  gap: 4px 0;
-  padding: 8px 10px 7px;
-  align-items: stretch;
-  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px 8px;
+  padding: 5px 8px;
   border-left: 3px solid #fbbf24;
   transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
   background: #fffaf3;
+  flex-wrap: nowrap;
 }
 
 .joki-list .list-item.joki-card:hover {
-  box-shadow: 0 6px 16px rgba(27, 27, 27, 0.08);
+  box-shadow: 0 4px 12px rgba(27, 27, 27, 0.08);
   transform: translateY(-1px);
 }
 
@@ -661,14 +659,11 @@ button:hover:not(:disabled) {
 }
 
 .joki-list .list-item.joki-card > .joki-header {
-  grid-area: header;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 4px 6px;
+  flex: 0 0 auto;
   min-width: 0;
-  margin-bottom: 1px;
+  gap: 4px;
 }
 
 .joki-list .list-item.joki-card > .joki-header.editing-action {
@@ -676,17 +671,16 @@ button:hover:not(:disabled) {
 }
 
 .joki-list .list-item.joki-card > .joki-header.editing-action .joki-action-input {
-  flex: 1 1 180px;
-  min-width: 160px;
-  max-width: 100%;
+  width: 140px;
+  min-width: 100px;
   font-family: var(--font-sans);
-  font-size: 0.85rem;
+  font-size: 0.78rem;
   font-weight: 700;
   color: #183404;
   background: #fff;
   border: 1.5px solid rgba(143, 198, 79, 0.5);
-  border-radius: 8px;
-  padding: 6px 10px;
+  border-radius: 6px;
+  padding: 3px 6px;
   outline: none;
 }
 
@@ -700,9 +694,9 @@ button:hover:not(:disabled) {
   background: transparent;
   border: 1px solid var(--border);
   color: var(--muted);
-  padding: 4px 8px;
-  font-size: 0.78rem;
-  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 0.72rem;
+  border-radius: 4px;
   cursor: pointer;
   flex: 0 0 auto;
 }
@@ -719,42 +713,46 @@ button:hover:not(:disabled) {
 }
 
 .joki-list .list-item.joki-card > .joki-body {
-  grid-area: body;
+  flex: 1 1 0;
   display: flex;
-  flex-direction: column;
-  gap: 3px;
+  align-items: center;
+  gap: 4px 6px;
   min-width: 0;
+  overflow: hidden;
+  flex-wrap: nowrap;
+}
+
+.joki-list .list-item.joki-card > .joki-body.editing-body {
+  gap: 3px 4px;
 }
 
 .joki-result-line {
-  align-items: flex-start;
-  gap: 8px;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
 }
 
 .joki-result-label {
   color: #6d6154;
-  font-size: 0.76rem;
+  font-size: 0.72rem;
   font-weight: 700;
   flex: 0 0 auto;
-  padding-top: 3px;
 }
 
 .joki-list .list-item.joki-card > .joki-actions {
-  grid-area: actions;
   display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-  border-top: 1px dashed var(--border);
-  padding-top: 5px;
-  margin-top: 4px;
+  gap: 3px;
+  flex: 0 0 auto;
+  border: none;
+  padding: 0;
+  margin: 0;
 }
 
 .joki-list .list-item.joki-card > .joki-actions button {
-  flex: 1;
-  min-width: 0;
-  padding: 6px 10px;
-  font-size: 0.74rem;
-  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 0.7rem;
+  border-radius: 6px;
+  white-space: nowrap;
 }
 
 .joki-display-name {
@@ -852,43 +850,51 @@ button:hover:not(:disabled) {
 
 .joki-list .joki-display-name {
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: 0.82rem;
   color: var(--ink);
-  word-break: break-word;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+  flex: 0 0 auto;
 }
 
 .joki-list .joki-tiktok-id {
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .joki-list .joki-gift {
   color: var(--accent-2);
   font-weight: 600;
-}
-
-.joki-list .joki-sep {
-  color: var(--muted);
-  opacity: 0.6;
+  font-size: 0.72rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
 }
 
 .joki-list .joki-roblox-label {
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   font-weight: 600;
 }
 
 .joki-list .joki-roblox-value {
   color: #08574f;
   font-weight: 700;
+  font-size: 0.72rem;
   cursor: text;
   background: rgba(15, 157, 146, 0.10);
-  padding: 1px 8px;
-  border-radius: 6px;
+  padding: 1px 6px;
+  border-radius: 4px;
   border: 1px solid rgba(15, 157, 146, 0.18);
-  word-break: break-word;
-  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100px;
 }
 
 .joki-list .joki-roblox-value:hover {
@@ -900,9 +906,13 @@ button:hover:not(:disabled) {
   color: #0a6b62;
   font-style: italic;
   font-weight: 600;
+  font-size: 0.72rem;
   background: transparent;
   border: 1px dashed rgba(15, 157, 146, 0.4);
   cursor: text;
+  padding: 1px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
 }
 
 .joki-list .joki-roblox-empty:hover {
