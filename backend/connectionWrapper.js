@@ -19,6 +19,7 @@ class TikTokConnectionWrapper extends EventEmitter {
         this.reconnectCount = 0;
         this.reconnectWaitMs = 1000;
         this.maxReconnectAttempts = 5;
+        this.hasAnnouncedConnection = false;
 
         this.connection = new WebcastPushConnection(uniqueId, options);
 
@@ -56,7 +57,8 @@ class TikTokConnectionWrapper extends EventEmitter {
             }
 
             // Notify client
-            if (!isReconnect) {
+            if (!this.hasAnnouncedConnection) {
+                this.hasAnnouncedConnection = true;
                 this.emit('connected', state);
             }
 
@@ -76,7 +78,9 @@ class TikTokConnectionWrapper extends EventEmitter {
                 }
             }
 
-            if (isReconnect) {
+            if (isRecoverableConnectError(errorMessage)) {
+                this.scheduleReconnect(errorMessage);
+            } else if (isReconnect) {
                 // Schedule the next reconnect attempt
                 this.scheduleReconnect(errorMessage);
             } else {
@@ -128,6 +132,14 @@ class TikTokConnectionWrapper extends EventEmitter {
             console.log(`WRAPPER @${this.uniqueId}: ${logString}`);
         }
     }
+}
+
+function isRecoverableConnectError(message) {
+    const text = String(message || '').toLowerCase();
+    return text.includes('unexpected server response: 200')
+        || text.includes('failed to extract the sigi_state html tag')
+        || text.includes('you might be blocked by tiktok')
+        || text.includes('websocket connection failed');
 }
 
 module.exports = {

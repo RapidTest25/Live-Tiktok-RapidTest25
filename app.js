@@ -228,8 +228,6 @@ class TikTokIOConnection {
         cleanup();
         reject("Connection Timeout - pastikan backend berjalan dan URL benar");
       }, 20000);
-
-      this.socket.emit("setUniqueId", this.uniqueId, this.options);
     });
   }
 
