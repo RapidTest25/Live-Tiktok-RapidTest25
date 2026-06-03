@@ -148,6 +148,7 @@ class TikTokIOConnection {
     this.socket = null;
     this.uniqueId = null;
     this.options = null;
+    this.boundHandlers = [];
   }
 
   _createSocket() {
@@ -173,6 +174,10 @@ class TikTokIOConnection {
       if (errMsg && errMsg.includes("LIVE has ended")) {
         this.uniqueId = null;
       }
+    });
+
+    this.boundHandlers.forEach(({ eventName, handler }) => {
+      this.socket.on(eventName, handler);
     });
   }
 
@@ -244,6 +249,7 @@ class TikTokIOConnection {
   }
 
   on(eventName, handler) {
+    this.boundHandlers.push({ eventName, handler });
     if (this.socket) {
       this.socket.on(eventName, handler);
     }
