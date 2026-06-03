@@ -129,19 +129,22 @@
     }
 
     function animateSpin(entry) {
+      const baseLabels = ["Golden", "Diamond", "Plasma", "Radio Active"];
       const labels = Array.isArray(entry.rollSequence) && entry.rollSequence.length
         ? entry.rollSequence
-        : ["Golden", "Diamond", "Plasma", "Radio Active"];
+        : baseLabels;
       const giftQty = Number(entry.giftQty) || 1;
       const giftText = entry.giftName && entry.giftName !== "-"
         ? `${entry.giftName}${giftQty > 1 ? ` x${giftQty}` : ""}${entry.diamondCount ? ` (${entry.diamondCount}🪙)` : ""}`
         : "Gift";
 
       const finalLabel = entry.finalLabel || labels[labels.length - 1] || "Mutasi";
-      const sequence = labels.slice();
-      if (sequence[sequence.length - 1] !== finalLabel) {
-        sequence.push(finalLabel);
+      const sequence = [];
+      const spinSource = labels.length > 1 ? labels : baseLabels;
+      for (let i = 0; i < 16; i += 1) {
+        sequence.push(spinSource[i % spinSource.length]);
       }
+      sequence.push(finalLabel);
 
       clearTimeout(rollTimeout);
       root.innerHTML = `

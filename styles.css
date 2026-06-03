@@ -305,6 +305,9 @@ button:hover:not(:disabled) {
   grid-column: 2 / span 2;
   grid-row: 1;
   min-height: 0;
+  max-height: 420px;
+  display: flex;
+  flex-direction: column;
 }
 
 .queue-toolbar {
@@ -546,7 +549,7 @@ button:hover:not(:disabled) {
 }
 
 .gifts-panel .gift-list {
-  max-height: 320px;
+  max-height: 280px;
 }
 
 .compact-panel {
@@ -558,18 +561,18 @@ button:hover:not(:disabled) {
 }
 
 .compact-spinner-wrap {
-  margin: 0 0 8px;
+  margin: 0 0 6px;
 }
 
 .compact-wheel-frame {
-  width: 155px;
-  height: 155px;
+  width: 128px;
+  height: 128px;
 }
 
 .compact-wheel-frame #wheel,
 .compact-wheel-frame canvas {
-  width: 140px;
-  height: 140px;
+  width: 114px;
+  height: 114px;
 }
 
 .spinner-panel .winner-display {
@@ -579,11 +582,20 @@ button:hover:not(:disabled) {
 }
 
 .spinner-panel .winner-list {
-  max-height: 130px;
+  max-height: 92px;
 }
 
 .spinner-panel .list-item {
   padding: 6px 8px;
+}
+
+.spinner-panel .panel-sub {
+  margin-bottom: 4px;
+}
+
+.spinner-panel .panel-footer,
+.spinner-panel .compact-footer {
+  margin-top: auto;
 }
 
 .spinner-history-header {
