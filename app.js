@@ -619,7 +619,7 @@ function setConnectionState(stateName) {
 function resolveBackendUrl() {
   const custom = el.backendInput.value.trim();
   if (custom) return custom;
-  return "https://live.aksocialboost.my.id";
+  return "https://exhibits-outsourcing-ambien-lamb.trycloudflare.com";
 }
 
 function ensureConnection() {
