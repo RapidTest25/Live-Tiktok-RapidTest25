@@ -137,6 +137,7 @@ let likeCount = 0;
 let diamondsCount = 0;
 let sessionUserMap = new Map();
 let sessionNumberMap = new Map();
+let recentGiftFeedKeys = new Map();
 let editingEntryId = null;
 let jokiSearchQuery = "";
 
@@ -931,9 +932,52 @@ function addChatItem(msg, sessionEntry) {
   trimList(el.chatList, MAX_CHAT_ITEMS);
 }
 
+function getGiftFeedStreakId(msg) {
+  const userId = msg.userId || msg.uniqueId || "unknown";
+  const giftId = msg.giftId || msg.giftName || "gift";
+  return `${userId}_${giftId}`;
+}
+
+function getGiftFeedKey(msg) {
+  return [
+    msg.userId || msg.uniqueId || "unknown",
+    msg.giftId || msg.giftName || "gift",
+    Number(msg.repeatCount || 1),
+    Number(msg.diamondCount || 0),
+    msg.repeatEnd ? "end" : "mid"
+  ].join("|");
+}
+
+function pruneRecentGiftFeedKeys() {
+  const now = Date.now();
+  recentGiftFeedKeys.forEach((time, key) => {
+    if (now - time > 8000) {
+      recentGiftFeedKeys.delete(key);
+    }
+  });
+}
+
+function findGiftFeedStreakItem(streakId) {
+  return Array.from(el.giftList.children).find((node) => node.dataset && node.dataset.streakId === streakId) || null;
+}
+
 function addGiftItem(msg) {
+  const pendingStreak = msg.giftType === 1 && !msg.repeatEnd;
+  const streakId = getGiftFeedStreakId(msg);
+  const feedKey = getGiftFeedKey(msg);
+  const now = Date.now();
+
+  pruneRecentGiftFeedKeys();
+
+  if (!pendingStreak && recentGiftFeedKeys.has(feedKey)) {
+    return;
+  }
+  recentGiftFeedKeys.set(feedKey, now);
+
   const item = document.createElement("div");
   item.className = "list-item gift-item";
+  item.dataset.streakId = streakId;
+  item.dataset.pendingStreak = pendingStreak ? "1" : "0";
 
   const content = document.createElement("div");
   content.className = "item-content";
@@ -956,16 +1000,20 @@ function addGiftItem(msg) {
 
   const meta = document.createElement("div");
   meta.className = "item-meta";
-  meta.textContent = formatTime(Date.now());
+  meta.textContent = formatTime(now);
 
   item.appendChild(content);
   item.appendChild(meta);
 
-  el.giftList.appendChild(item);
-  appendWithAutoScroll(el.giftList, giftFollowEnabled);
+  const existingStreakItem = findGiftFeedStreakItem(streakId);
+  if (existingStreakItem) {
+    existingStreakItem.replaceWith(item);
+  } else {
+    el.giftList.appendChild(item);
+    appendWithAutoScroll(el.giftList, giftFollowEnabled);
+  }
   trimList(el.giftList, MAX_GIFT_ITEMS);
 
-  const pendingStreak = msg.giftType === 1 && !msg.repeatEnd;
   if (!pendingStreak && msg.diamondCount) {
     diamondsCount += msg.diamondCount * (msg.repeatCount || 1);
     updateStats();
