@@ -144,7 +144,13 @@ const el = {};
 
 class TikTokIOConnection {
   constructor(backendUrl) {
-    this.socket = io(backendUrl, { transports: ["websocket", "polling"] });
+    this.socket = io(backendUrl, {
+      transports: ["polling", "websocket"],
+      upgrade: true,
+      reconnection: true,
+      reconnectionAttempts: 2,
+      timeout: 15000
+    });
     this.uniqueId = null;
     this.options = null;
 
@@ -168,12 +174,10 @@ class TikTokIOConnection {
     return new Promise((resolve, reject) => {
       this.socket.off("tiktokConnected");
       this.socket.off("tiktokDisconnected");
-      this.socket.off("connect_error");
 
       const cleanup = () => {
         this.socket.off("tiktokConnected", onConnected);
         this.socket.off("tiktokDisconnected", onDisconnected);
-        this.socket.off("connect_error", onConnectError);
         clearTimeout(timeoutId);
       };
 
@@ -187,14 +191,8 @@ class TikTokIOConnection {
         reject(errMsg);
       };
 
-      const onConnectError = (err) => {
-        cleanup();
-        reject(err && err.message ? err.message : "Backend tidak bisa dihubungi");
-      };
-
       this.socket.once("tiktokConnected", onConnected);
       this.socket.once("tiktokDisconnected", onDisconnected);
-      this.socket.once("connect_error", onConnectError);
 
       const timeoutId = setTimeout(() => {
         cleanup();
