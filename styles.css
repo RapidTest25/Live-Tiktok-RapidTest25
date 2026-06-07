@@ -342,10 +342,19 @@ button:hover:not(:disabled) {
 
 .queue-toolbar {
   margin-bottom: 8px;
+  display: flex;
+  gap: 8px;
 }
 
 .queue-toolbar input {
-  width: 100%;
+  min-width: 0;
+  flex: 1;
+}
+
+.queue-toolbar select {
+  flex: 0 0 160px;
+  padding: 8px 10px;
+  font-size: 0.84rem;
 }
 
 .panel-link-btn {
@@ -574,7 +583,7 @@ button:hover:not(:disabled) {
 }
 
 .joki-list {
-  max-height: min(70vh, 700px);
+  max-height: 382px;
 }
 
 .compact-list {
@@ -881,6 +890,13 @@ button:hover:not(:disabled) {
   background: rgba(0, 0, 0, 0.02);
   border: 1px dashed var(--border);
   border-radius: 12px;
+}
+
+.joki-more-note {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.78rem;
+  padding: 6px 8px;
 }
 
 .joki-list .item-title {

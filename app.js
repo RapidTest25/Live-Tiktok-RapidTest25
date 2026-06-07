@@ -3,6 +3,7 @@ const MAX_CHAT_ITEMS = 200;
 const MAX_GIFT_ITEMS = 120;
 const MAX_SESSION_ITEMS = 300;
 const MAX_JOKI_ITEMS = 200;
+const MAX_VISIBLE_JOKI_ROWS = 10;
 const SPIN_RESULT_REVEAL_MS = 3200;
 const WHEEL_COLORS = [
   "#ffb703",
@@ -30,33 +31,33 @@ const DEFAULT_SPIN_POOLS = [
 
 const DEFAULT_GIFT_RULES = [
   {
-    id: "rule-rose-spin-mutasi",
-    matchType: "name",
-    matchValue: "rose",
-    mode: "spin",
-    poolId: "pool-mutasi",
-    unitCount: 1,
-    action: "1c br random mutasi",
-    locked: true
-  },
-  {
-    id: "rule-rose-kick-celestial",
+    id: "rule-rose-hotspot",
     matchType: "name",
     matchValue: "rose",
     mode: "direct",
-    rewardAction: "1x kick celestial mutasi",
-    unitCount: 3,
-    action: "3c kick celestial mutasi",
+    rewardAction: "sepeda/pot hotspot",
+    unitCount: 1,
+    action: "sepeda/pot hotspot",
     locked: true
   },
   {
-    id: "rule-heartme-br-celestial",
+    id: "rule-heartme-celestial-mutasi-2",
     matchType: "name",
     matchValue: "heart me",
     mode: "direct",
-    rewardAction: "1 br celestial + og",
+    rewardAction: "Celestial Mutasi 2",
     unitCount: 1,
-    action: "1 br celestial + og",
+    action: "Celestial Mutasi 2",
+    locked: true
+  },
+  {
+    id: "rule-gg-krupuk-mutasi",
+    matchType: "name",
+    matchValue: "gg",
+    mode: "direct",
+    rewardAction: "Krupuk Pagi Pagi Mutasi",
+    unitCount: 3,
+    action: "3x Krupuk Pagi Pagi Mutasi",
     locked: true
   },
   {
@@ -64,19 +65,19 @@ const DEFAULT_GIFT_RULES = [
     matchType: "name",
     matchValue: "finger heart",
     mode: "direct",
-    rewardAction: "Max in br kamu + bonus br mutasi",
+    rewardAction: "Max in 1 BR Kamu",
     unitCount: 1,
-    action: "Max in br kamu + bonus br mutasi",
+    action: "Max in 1 BR Kamu",
     locked: true
   },
   {
-    id: "rule-doughnut-meowl-bacon",
+    id: "rule-doughnut-gajah-bacon",
     matchType: "name",
     matchValue: "doughnut",
     mode: "direct",
-    rewardAction: "Meowl bacon max + bonus",
-    unitCount: 1,
-    action: "Meowl bacon max + bonus",
+    rewardAction: "Gajah Bacon LVL MAX",
+    unitCount: 2,
+    action: "2x Gajah Bacon LVL MAX",
     locked: true
   },
   {
@@ -141,6 +142,7 @@ let sessionNumberMap = new Map();
 let recentGiftFeedKeys = new Map();
 let editingEntryId = null;
 let jokiSearchQuery = "";
+let jokiStatusFilter = "all";
 
 const el = {};
 
@@ -449,24 +451,8 @@ function loadState() {
         normalized.tiktokId = null;
       }
       if (normalized.source === "gift" && (!normalized.action || /^manual$/i.test(String(normalized.action || "").trim()))) {
-        const giftKey = normalizeKey(normalized.giftName);
-        if (giftKey.includes("gg")) {
-          const rewardQty = Math.floor((Number(normalized.giftQty) || 1) / 3);
-          if (rewardQty > 0) {
-            normalized.action = "1x kick celestial mutasi";
-            normalized.qty = rewardQty;
-            normalized.rewardMode = "direct";
-            normalized.unmatched = false;
-            normalized.ruleId = "rule-gg-kick-celestial";
-            normalized.unitCount = 3;
-          } else {
-            normalized.action = "Belum diatur";
-            normalized.unmatched = true;
-          }
-        } else {
-          normalized.action = "Belum diatur";
-          normalized.unmatched = true;
-        }
+        normalized.action = "Belum diatur";
+        normalized.unmatched = true;
         migratedGiftManualEntries = true;
       }
       if (normalized.status === "classDone") {
@@ -495,7 +481,11 @@ function loadState() {
       "rule-equiv-5",
       "rule-name-superpopular",
       "rule-equiv-9",
-      "rule-equiv-30"
+      "rule-equiv-30",
+      "rule-rose-spin-mutasi",
+      "rule-rose-kick-celestial",
+      "rule-heartme-br-celestial",
+      "rule-doughnut-meowl-bacon"
     ];
     const hasOldDefault = state.giftRules.some((r) => OLD_DEFAULT_RULE_IDS.includes(r.id));
     if (hasOldDefault) {
@@ -509,11 +499,11 @@ function loadState() {
     }
 
     const criticalRuleIds = [
-      "rule-rose-spin-mutasi",
-      "rule-rose-kick-celestial",
-      "rule-heartme-br-celestial",
+      "rule-rose-hotspot",
+      "rule-heartme-celestial-mutasi-2",
+      "rule-gg-krupuk-mutasi",
       "rule-fingerheart-max-br",
-      "rule-doughnut-meowl-bacon",
+      "rule-doughnut-gajah-bacon",
       "rule-default"
     ];
     const existingIds = new Set(state.giftRules.map((r) => r.id));
@@ -550,6 +540,16 @@ function loadState() {
     state.jokiQueue = state.jokiQueue.map((entry) => {
       const normalized = { ...entry };
       if (normalized.source === "gift") {
+        if (!normalized.action || /^manual$/i.test(String(normalized.action).trim()) || /^belum diatur$/i.test(String(normalized.action).trim())) {
+          const inferredRule = inferRuleForImportedEntry(normalized);
+          if (inferredRule) {
+            normalized.action = inferredRule.action || inferredRule.rewardAction || normalized.action;
+            normalized.ruleId = inferredRule.id || normalized.ruleId;
+            normalized.unitCount = inferredRule.unitCount || normalized.unitCount || 1;
+            normalized.unmatched = false;
+            rulesInjected = true;
+          }
+        }
         if ((!normalized.giftQty || Number(normalized.giftQty) <= 0) && (Number(normalized.unitCount) || 1) > 1) {
           normalized.giftQty = (Number(normalized.qty) || 1) * (Number(normalized.unitCount) || 1);
           rulesInjected = true;
@@ -1128,6 +1128,16 @@ function getGiftProgressKey(uniqueId, ruleId) {
   return `${uniqueId || "unknown"}::${ruleId}`;
 }
 
+function giftNameMatchesRule(giftName, matchValue) {
+  const gift = normalizeKey(giftName).replace(/[^a-z0-9]+/g, " ").trim();
+  const target = normalizeKey(matchValue).replace(/[^a-z0-9]+/g, " ").trim();
+  if (!target) return false;
+  if (gift === target) return true;
+  const giftCompact = gift.replace(/\s+/g, "");
+  const targetCompact = target.replace(/\s+/g, "");
+  return giftCompact === targetCompact;
+}
+
 function processGiftRules(msg) {
   const pendingStreak = msg.giftType === 1 && !msg.repeatEnd;
   if (pendingStreak) return;
@@ -1142,7 +1152,7 @@ function processGiftRules(msg) {
       return Number(rule.matchValue) === diamondCount;
     }
     if (rule.matchType === "name") {
-      return giftName.includes(normalizeKey(rule.matchValue));
+      return giftNameMatchesRule(msg.giftName, rule.matchValue);
     }
     if (rule.matchType === "any") {
       return true;
@@ -1250,29 +1260,7 @@ function processGiftRules(msg) {
   const nameRules = state.giftRules.filter((r) => r.matchType === "name");
   const matchingNameRules = nameRules.filter((r) => checkRule(r));
 
-  if (giftName.includes("rose")) {
-    const roseDirectRule = matchingNameRules.find((r) => r.id === "rule-rose-kick-celestial");
-    const roseSpinRule = matchingNameRules.find((r) => r.id === "rule-rose-spin-mutasi");
-    if (roseDirectRule || roseSpinRule) {
-      const directQty = roseDirectRule ? Math.floor(repeatCount / 3) : 0;
-      const spinQty = roseSpinRule ? (repeatCount % 3) : 0;
-
-      if (directQty > 0) {
-        fireDirectRule(roseDirectRule, directQty, { giftQty: directQty * 3 });
-      }
-      if (spinQty > 0) {
-        fireSpinRule(roseSpinRule, spinQty);
-      }
-      if (directQty > 0 || spinQty > 0) {
-        return;
-      }
-    }
-  }
-
   for (const rule of matchingNameRules) {
-    if (rule.id === "rule-rose-kick-celestial" || rule.id === "rule-rose-spin-mutasi") {
-      continue;
-    }
     if (checkRule(rule)) {
       processRule(rule);
       return;
@@ -1391,6 +1379,7 @@ function renderJokiQueue() {
   const queueNumberById = new Map(sortedAll.map((entry, index) => [entry.id, index + 1]));
   const sorted = sortedAll
     .filter((entry) => {
+      if (jokiStatusFilter !== "all" && (entry.status || "pending") !== jokiStatusFilter) return false;
       if (!search) return true;
       const haystack = [
         entry.user,
@@ -1413,7 +1402,9 @@ function renderJokiQueue() {
     return;
   }
 
-  sorted.forEach((entry) => {
+  const visibleRows = sorted.slice(0, MAX_VISIBLE_JOKI_ROWS);
+
+  visibleRows.forEach((entry) => {
     const row = document.createElement("div");
     const statusKey = entry.status || "pending";
     row.className = `list-item joki-card status-${getJokiStatusClass(statusKey)}`;
@@ -1528,6 +1519,13 @@ function renderJokiQueue() {
 
     el.jokiList.appendChild(row);
   });
+
+  if (sorted.length > MAX_VISIBLE_JOKI_ROWS) {
+    const more = document.createElement("div");
+    more.className = "joki-more-note";
+    more.textContent = `Menampilkan 10 dari ${sorted.length} antrean. Pakai filter/pencarian untuk mempersempit.`;
+    el.jokiList.appendChild(more);
+  }
 
   updateCounts();
 }
@@ -1848,12 +1846,46 @@ function handleImportFile(file) {
   reader.readAsText(file);
 }
 
+function inferRuleForImportedEntry(entry) {
+  if (!entry || !entry.giftName || entry.giftName === "-") return null;
+  const diamondCount = Number(entry.diamondCount) || 0;
+  return state.giftRules.find((rule) => {
+    if (rule.matchType === "name") {
+      return giftNameMatchesRule(entry.giftName, rule.matchValue);
+    }
+    if (rule.matchType === "diamond") {
+      return Number(rule.matchValue) === diamondCount;
+    }
+    return false;
+  }) || null;
+}
+
+function inferImportedAction(entry) {
+  const rawAction = String(entry.action || "").trim();
+  const needsInfer = !rawAction || /^manual$/i.test(rawAction) || /^belum diatur$/i.test(rawAction);
+  if (!needsInfer) return rawAction;
+
+  if (entry.rewardMode === "spin" && entry.spinResults) {
+    return summarizeSpinResults(entry.spinResults, entry.poolId);
+  }
+
+  const rule = inferRuleForImportedEntry(entry);
+  if (rule) {
+    return rule.action || rule.rewardAction || rawAction || "Belum diatur";
+  }
+
+  return entry.source === "manual" ? "Manual" : "Belum diatur";
+}
+
 function normalizeImportedEntry(entry) {
+  const inferredAction = inferImportedAction(entry || {});
+  const inferredRule = inferRuleForImportedEntry(entry || {});
+  const unmatched = inferredRule ? false : (inferredAction === "Belum diatur" || !!entry.unmatched);
   return {
     id: entry.id || generateId("joki"),
-    action: entry.action || "Manual",
-    matchKey: entry.matchKey || entry.action || `${entry.giftName || "gift"}|${Number(entry.diamondCount) || 0}`,
-    consolidateKey: entry.consolidateKey || entry.matchKey || entry.action || `${entry.giftName || "gift"}|${Number(entry.diamondCount) || 0}`,
+    action: inferredAction,
+    matchKey: entry.matchKey || inferredAction || `${entry.giftName || "gift"}|${Number(entry.diamondCount) || 0}`,
+    consolidateKey: entry.consolidateKey || entry.matchKey || inferredAction || `${entry.giftName || "gift"}|${Number(entry.diamondCount) || 0}`,
     user: entry.user || "Unknown",
     username: entry.username || null,
     tiktokId: entry.tiktokId || null,
@@ -1865,12 +1897,12 @@ function normalizeImportedEntry(entry) {
     status: entry.status || "pending",
     source: entry.source || "imported",
     notes: entry.notes || "",
-    unmatched: !!entry.unmatched,
+    unmatched,
     rewardMode: entry.rewardMode || "direct",
     spinResults: entry.spinResults || null,
     poolId: entry.poolId || null,
-    ruleId: entry.ruleId || null,
-    unitCount: entry.unitCount || 1
+    ruleId: entry.ruleId || (inferredRule && inferredRule.id) || null,
+    unitCount: entry.unitCount || (inferredRule && inferredRule.unitCount) || 1
   };
 }
 
@@ -2602,6 +2634,10 @@ function bindEvents() {
     jokiSearchQuery = event.target.value || "";
     renderJokiQueue();
   });
+  el.jokiStatusFilter.addEventListener("change", (event) => {
+    jokiStatusFilter = event.target.value || "all";
+    renderJokiQueue();
+  });
   el.exportRulesBtn.addEventListener("click", () => {
     if (state.giftRules.length === 0) {
       showToast("Belum ada gift rule", "error");
@@ -2651,6 +2687,7 @@ function init() {
   el.numberMax = $("numberMax");
   el.jokiList = $("jokiList");
   el.jokiSearchInput = $("jokiSearchInput");
+  el.jokiStatusFilter = $("jokiStatusFilter");
   el.jokiCount = $("jokiCount");
   el.clearJokiBtn = $("clearJokiBtn");
   el.copyJokiBtn = $("copyJokiBtn");
