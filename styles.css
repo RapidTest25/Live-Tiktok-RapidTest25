@@ -516,7 +516,7 @@ button:hover:not(:disabled) {
 .joki-action-chip {
   display: inline-flex;
   align-items: center;
-  max-width: 160px;
+  max-width: 210px;
   min-width: 0;
   padding: 2px 7px;
   border-radius: 6px;
@@ -583,7 +583,7 @@ button:hover:not(:disabled) {
 }
 
 .joki-list {
-  max-height: 382px;
+  max-height: 510px;
 }
 
 .compact-list {
@@ -694,9 +694,9 @@ button:hover:not(:disabled) {
 
 .joki-list .list-item.joki-card {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px 8px;
-  padding: 5px 8px;
+  padding: 7px 8px;
   border-left: 3px solid #fbbf24;
   transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
   background: #fffaf3;
@@ -734,6 +734,7 @@ button:hover:not(:disabled) {
   flex: 0 0 auto;
   min-width: 0;
   gap: 4px;
+  padding-top: 1px;
 }
 
 .joki-list .list-item.joki-card > .joki-header.editing-action {
@@ -788,8 +789,9 @@ button:hover:not(:disabled) {
   align-items: center;
   gap: 4px 6px;
   min-width: 0;
-  overflow: hidden;
-  flex-wrap: nowrap;
+  overflow: visible;
+  flex-wrap: wrap;
+  line-height: 1.35;
 }
 
 .joki-list .list-item.joki-card > .joki-body.editing-body {
@@ -816,6 +818,7 @@ button:hover:not(:disabled) {
   border: none;
   padding: 0;
   margin: 0;
+  padding-top: 1px;
 }
 
 .joki-list .list-item.joki-card > .joki-actions button {
@@ -892,13 +895,6 @@ button:hover:not(:disabled) {
   border-radius: 12px;
 }
 
-.joki-more-note {
-  text-align: center;
-  color: var(--muted);
-  font-size: 0.78rem;
-  padding: 6px 8px;
-}
-
 .joki-list .item-title {
   white-space: nowrap;
   overflow: hidden;
@@ -932,7 +928,7 @@ button:hover:not(:disabled) {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 140px;
+  max-width: 170px;
   flex: 0 0 auto;
 }
 
@@ -946,11 +942,11 @@ button:hover:not(:disabled) {
 .joki-list .joki-gift {
   color: var(--accent-2);
   font-weight: 600;
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 120px;
+  max-width: 210px;
 }
 
 .joki-list .joki-roblox-label {

@@ -3,7 +3,6 @@ const MAX_CHAT_ITEMS = 200;
 const MAX_GIFT_ITEMS = 120;
 const MAX_SESSION_ITEMS = 300;
 const MAX_JOKI_ITEMS = 200;
-const MAX_VISIBLE_JOKI_ROWS = 10;
 const SPIN_RESULT_REVEAL_MS = 3200;
 const WHEEL_COLORS = [
   "#ffb703",
@@ -1402,9 +1401,7 @@ function renderJokiQueue() {
     return;
   }
 
-  const visibleRows = sorted.slice(0, MAX_VISIBLE_JOKI_ROWS);
-
-  visibleRows.forEach((entry) => {
+  sorted.forEach((entry) => {
     const row = document.createElement("div");
     const statusKey = entry.status || "pending";
     row.className = `list-item joki-card status-${getJokiStatusClass(statusKey)}`;
@@ -1519,13 +1516,6 @@ function renderJokiQueue() {
 
     el.jokiList.appendChild(row);
   });
-
-  if (sorted.length > MAX_VISIBLE_JOKI_ROWS) {
-    const more = document.createElement("div");
-    more.className = "joki-more-note";
-    more.textContent = `Menampilkan 10 dari ${sorted.length} antrean. Pakai filter/pencarian untuk mempersempit.`;
-    el.jokiList.appendChild(more);
-  }
 
   updateCounts();
 }
