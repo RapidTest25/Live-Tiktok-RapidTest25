@@ -23,8 +23,10 @@
       color: var(--ink);
       background: var(--bg);
       padding: 16px;
+      max-width: 520px;
+      margin: 0 auto;
     }
-    h1 { font-size: 1.4rem; margin: 0 0 16px; }
+    h1 { font-size: 1.3rem; margin: 0 0 14px; display: flex; align-items: center; gap: 8px; }
     .card {
       background: var(--card);
       border: 1px solid var(--border);
@@ -60,7 +62,7 @@
     button.success { background: var(--accent-2); color: #fff; }
     .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
     .status-bar {
-      padding: 10px 14px;
+      padding: 12px 16px;
       border-radius: 10px;
       background: rgba(255,107,53,0.08);
       border: 1px solid rgba(255,107,53,0.15);
@@ -68,8 +70,23 @@
       font-size: 0.9rem;
     }
     .status-bar.active { background: rgba(16,185,129,0.08); border-color: rgba(16,185,129,0.2); }
-    .status-bar .big { font-size: 1.8rem; font-weight: 900; color: var(--accent); }
-    .status-bar .gold { color: #b8860b; }
+    .status-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 6px;
+    }
+    .status-row:last-child { margin-bottom: 0; }
+    .status-bar .big {
+      font-size: 1.4rem;
+      font-weight: 900;
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+      min-width: 60px;
+      text-align: right;
+    }
+    .status-bar .gold { color: #b8860b; font-weight: 700; }
     .link-box {
       display: flex;
       gap: 6px;
@@ -105,9 +122,14 @@
   <h1>🔨 Control Lelang</h1>
 
   <div class="status-bar" id="statusBar">
-    <div>Status: <strong id="statusText">Belum aktif</strong></div>
-    <div class="big" id="timerDisplay">0:00</div>
-    <div>Tertinggi: <strong class="gold" id="currentBidDisplay">0</strong> oleh <strong id="currentBidderDisplay">-</strong></div>
+    <div class="status-row">
+      <span>Status: <strong id="statusText">Belum aktif</strong></span>
+      <span class="big" id="timerDisplay">0:00</span>
+    </div>
+    <div class="status-row">
+      <span>Tertinggi: <span class="gold" id="currentBidDisplay">0</span></span>
+      <span>oleh <strong id="currentBidderDisplay">-</strong></span>
+    </div>
   </div>
 
   <div class="card">
