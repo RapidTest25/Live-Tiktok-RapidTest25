@@ -5,20 +5,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Overlay Lelang</title>
   <style>
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes pulseGlow { 0%,100% { box-shadow: 0 0 20px rgba(255,107,53,0.3); } 50% { box-shadow: 0 0 40px rgba(255,107,53,0.6); } }
-    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes timerWarn { 0%,100% { color: #ff6b35; } 50% { color: #ff4444; } }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes pulseGlow { 0%,100% { box-shadow: 0 0 20px rgba(255,107,53,0.2); } 50% { box-shadow: 0 0 40px rgba(255,107,53,0.5); } }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes timerWarn { 0%,100% { color: #ff6b35; } 50% { color: #ff2222; } }
+    @keyframes coinSpin { 0% { transform: rotateY(0deg); } 100% { transform: rotateY(360deg); } }
+    @keyframes shimmer { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
+    @keyframes idleFloat { 0%,100% { transform: translateY(0px) rotate(0deg); } 50% { transform: translateY(-8px) rotate(3deg); } }
+    @keyframes idleGlow { 0%,100% { opacity: 0.4; } 50% { opacity: 0.8; } }
 
     :root {
       color-scheme: dark;
       --bg: rgba(0,0,0,0);
-      --card: rgba(8,15,24,0.92);
+      --card: rgba(8,15,24,0.94);
       --text: #ffffff;
-      --muted: rgba(255,255,255,0.7);
+      --muted: rgba(255,255,255,0.65);
       --accent: #ff6b35;
       --accent-2: #3b82f6;
       --gold: #ffd700;
+      --gold-dark: #b8860b;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -30,12 +35,64 @@
       place-items: center;
       overflow: hidden;
     }
-    .auction-wrap {
-      width: min(700px, 92vw);
-      padding: 24px 28px;
-      border-radius: 24px;
+
+    /* ===== IDLE STATE ===== */
+    .idle-wrap {
+      width: min(600px, 90vw);
+      padding: 50px 40px;
+      border-radius: 28px;
       background: var(--card);
-      border: 1px solid rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .idle-wrap::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle at 30% 30%, rgba(255,215,0,0.06) 0%, transparent 50%),
+                  radial-gradient(circle at 70% 70%, rgba(255,107,53,0.04) 0%, transparent 50%);
+      animation: idleGlow 4s ease-in-out infinite;
+    }
+    .idle-coin {
+      font-size: 4rem;
+      animation: idleFloat 3s ease-in-out infinite;
+      position: relative;
+      z-index: 1;
+    }
+    .idle-title {
+      font-size: 1.6rem;
+      font-weight: 800;
+      margin-top: 16px;
+      background: linear-gradient(90deg, var(--gold), #fff, var(--gold));
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: shimmer 3s linear infinite;
+      position: relative;
+      z-index: 1;
+    }
+    .idle-sub {
+      font-size: 0.95rem;
+      color: var(--muted);
+      margin-top: 8px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ===== AUCTION STATE ===== */
+    .auction-wrap {
+      width: min(650px, 92vw);
+      padding: 28px 32px;
+      border-radius: 28px;
+      background: var(--card);
+      border: 1px solid rgba(255,255,255,0.1);
       box-shadow: 0 30px 80px rgba(0,0,0,0.5);
       animation: fadeIn 0.5s ease;
     }
@@ -43,43 +100,43 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 16px;
+      margin-bottom: 18px;
     }
     .auction-tag {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding: 6px 14px;
+      padding: 7px 16px;
       border-radius: 999px;
       background: rgba(255,107,53,0.18);
       color: #ffb088;
       font-weight: 700;
-      font-size: 0.85rem;
+      font-size: 0.88rem;
       letter-spacing: 0.5px;
     }
-    .auction-tag.active { background: rgba(255,107,53,0.25); animation: pulseGlow 2s infinite; }
+    .auction-tag.active { background: rgba(255,107,53,0.28); animation: pulseGlow 2s infinite; }
     .auction-tag.ended { background: rgba(107,114,128,0.2); color: #9ca3af; animation: none; }
     .timer {
-      font-size: 2.2rem;
+      font-size: 2rem;
       font-weight: 900;
       font-variant-numeric: tabular-nums;
       color: var(--accent);
-      min-width: 80px;
+      min-width: 70px;
       text-align: right;
     }
     .timer.warning { animation: timerWarn 0.8s infinite; }
     .timer.ended { color: #9ca3af; }
     .auction-title {
-      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      font-size: clamp(1.6rem, 3.5vw, 2.4rem);
       font-weight: 900;
-      line-height: 1.1;
+      line-height: 1.15;
       margin-bottom: 6px;
       animation: slideUp 0.4s ease 0.1s both;
     }
     .auction-desc {
-      font-size: 1rem;
+      font-size: 0.95rem;
       color: var(--muted);
-      margin-bottom: 20px;
+      margin-bottom: 22px;
       animation: slideUp 0.4s ease 0.2s both;
     }
     .bid-section {
@@ -90,46 +147,63 @@
       animation: slideUp 0.4s ease 0.3s both;
     }
     .bid-label {
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       color: var(--muted);
-      margin-bottom: 4px;
+      margin-bottom: 2px;
     }
     .bid-amount {
-      font-size: clamp(2.5rem, 6vw, 4rem);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: clamp(2.2rem, 5vw, 3.2rem);
       font-weight: 900;
       color: var(--gold);
       line-height: 1;
-      text-shadow: 0 0 30px rgba(255,215,0,0.4);
+      text-shadow: 0 0 30px rgba(255,215,0,0.35);
+    }
+    .coin-icon {
+      font-size: 0.85em;
+      filter: drop-shadow(0 0 8px rgba(255,215,0,0.4));
     }
     .bidder-name {
-      font-size: 1.2rem;
+      font-size: 1.15rem;
       font-weight: 700;
       color: var(--accent-2);
-      margin-top: 4px;
+      margin-top: 6px;
     }
     .min-bid-info {
       font-size: 0.82rem;
       color: var(--muted);
       text-align: right;
+      display: flex;
+      align-items: center;
+      gap: 4px;
     }
-    .empty-auction {
+    .min-bid-info .coin-icon { font-size: 0.9em; }
+    .ended-banner {
       text-align: center;
-      color: var(--muted);
-      font-size: 1.25rem;
-      padding: 60px 20px;
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: 12px;
+      background: rgba(255,107,53,0.1);
+      border: 1px solid rgba(255,107,53,0.2);
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--accent);
+      animation: slideUp 0.4s ease 0.5s both;
     }
     .history {
-      margin-top: 16px;
-      padding-top: 12px;
-      border-top: 1px solid rgba(255,255,255,0.08);
+      margin-top: 18px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(255,255,255,0.06);
       animation: slideUp 0.4s ease 0.4s both;
     }
     .history-title {
-      font-size: 0.78rem;
+      font-size: 0.75rem;
       color: var(--muted);
       margin-bottom: 8px;
       text-transform: uppercase;
-      letter-spacing: 1px;
+      letter-spacing: 1.5px;
     }
     .history-list {
       display: flex;
@@ -142,38 +216,51 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 4px 8px;
+      padding: 5px 10px;
       border-radius: 8px;
-      background: rgba(255,255,255,0.04);
+      background: rgba(255,255,255,0.03);
       font-size: 0.82rem;
     }
     .history-item .bidder { color: var(--accent-2); font-weight: 600; }
-    .history-item .amount { color: var(--gold); font-weight: 700; }
+    .history-item .amount {
+      color: var(--gold);
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
   </style>
 </head>
 <body>
-  <div class="auction-wrap" id="auctionRoot">
-    <div class="empty-auction">Belum ada lelang</div>
+  <div id="auctionRoot">
+    <div class="idle-wrap">
+      <div class="idle-coin">🪙</div>
+      <div class="idle-title">LELANG</div>
+      <div class="idle-sub">Menunggu lelang dimulai...</div>
+    </div>
   </div>
   <script>
     const params = new URLSearchParams(window.location.search);
     const backendUrl = (params.get("backend") || "").replace(/\/$/, "");
     const root = document.getElementById("auctionRoot");
-    let lastState = null;
 
     function formatTime(seconds) {
       const m = Math.floor(seconds / 60);
       const s = seconds % 60;
-      return m > 0 ? `${m}:${String(s).padStart(2, "0")}` : `0:${String(s).padStart(2, "0")}`;
+      return m > 0 ? m + ":" + String(s).padStart(2, "0") : "0:" + String(s).padStart(2, "0");
     }
 
     function formatNumber(n) {
       return Number(n || 0).toLocaleString("id-ID");
     }
 
+    function escapeHtml(text) {
+      return String(text || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+    }
+
     function renderAuction(state) {
-      if (!state || !state.title) {
-        root.innerHTML = '<div class="empty-auction">Belum ada lelang</div>';
+      if (!state || !state.title || (!state.isActive && !state.startedAt)) {
+        root.innerHTML = '<div class="idle-wrap"><div class="idle-coin">🪙</div><div class="idle-title">LELANG</div><div class="idle-sub">Menunggu lelang dimulai...</div></div>';
         return;
       }
 
@@ -182,62 +269,58 @@
       const timer = state.timerRemaining || 0;
       const timerClass = isActive && timer <= 10 ? "warning" : (!isActive ? "ended" : "");
       const tagClass = isActive ? "active" : "ended";
-      const tagText = isActive ? (isPaused ? "⏸ PAUSED" : "🔴 LIVE") : (timer === 0 && state.startedAt ? "SELESAI" : "SIAP");
+      const tagText = isActive ? (isPaused ? "⏸ JEDA" : "🔴 LIVE") : (state.startedAt ? "SELESAI" : "SIAP");
 
-      let html = `
-        <div class="auction-header">
-          <span class="auction-tag ${tagClass}">${tagText}</span>
-          <span class="timer ${timerClass}">${formatTime(timer)}</span>
-        </div>
-        <div class="auction-title">${escapeHtml(state.title)}</div>`;
+      let html = '<div class="auction-wrap">';
+      html += '<div class="auction-header">';
+      html += '<span class="auction-tag ' + tagClass + '">' + tagText + '</span>';
+      html += '<span class="timer ' + timerClass + '">' + formatTime(timer) + '</span>';
+      html += '</div>';
+      html += '<div class="auction-title">' + escapeHtml(state.title) + '</div>';
 
       if (state.description) {
-        html += `<div class="auction-desc">${escapeHtml(state.description)}</div>`;
+        html += '<div class="auction-desc">' + escapeHtml(state.description) + '</div>';
       }
 
-      html += `
-        <div class="bid-section">
-          <div>
-            <div class="bid-label">Tertinggi</div>
-            <div class="bid-amount">${formatNumber(state.currentBid)}</div>
-            ${state.currentBidder ? `<div class="bidder-name">${escapeHtml(state.currentBidder)}</div>` : ""}
-          </div>
-          <div class="min-bid-info">Min: ${formatNumber(state.minBid)}</div>
-        </div>`;
+      html += '<div class="bid-section">';
+      html += '<div>';
+      html += '<div class="bid-label">Tertinggi</div>';
+      html += '<div class="bid-amount"><span class="coin-icon">🪙</span> ' + formatNumber(state.currentBid) + '</div>';
+      if (state.currentBidder) {
+        html += '<div class="bidder-name">' + escapeHtml(state.currentBidder) + '</div>';
+      }
+      html += '</div>';
+      html += '<div class="min-bid-info">Min: <span class="coin-icon">🪙</span> ' + formatNumber(state.minBid) + '</div>';
+      html += '</div>';
+
+      if (!isActive && state.startedAt) {
+        var winner = state.currentBidder ? escapeHtml(state.currentBidder) : "Tidak ada";
+        html += '<div class="ended-banner">🏆 Pemenang: ' + winner + ' — 🪙 ' + formatNumber(state.currentBid) + '</div>';
+      }
 
       if (state.bidHistory && state.bidHistory.length > 0) {
-        const recent = state.bidHistory.slice(-5).reverse();
-        html += `
-          <div class="history">
-            <div class="history-title">Riwayat Bid</div>
-            <div class="history-list">
-              ${recent.map(b => `
-                <div class="history-item">
-                  <span class="bidder">${escapeHtml(b.bidder)}</span>
-                  <span class="amount">${formatNumber(b.amount)}</span>
-                </div>
-              `).join("")}
-            </div>
-          </div>`;
+        var recent = state.bidHistory.slice(-5).reverse();
+        html += '<div class="history">';
+        html += '<div class="history-title">Riwayat Bid</div>';
+        html += '<div class="history-list">';
+        for (var i = 0; i < recent.length; i++) {
+          var b = recent[i];
+          html += '<div class="history-item"><span class="bidder">' + escapeHtml(b.bidder) + '</span><span class="amount"><span class="coin-icon">🪙</span> ' + formatNumber(b.amount) + '</span></div>';
+        }
+        html += '</div></div>';
       }
 
+      html += '</div>';
       root.innerHTML = html;
-    }
-
-    function escapeHtml(text) {
-      return String(text || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
     }
 
     async function fetchState() {
       if (!backendUrl) return;
       try {
-        const res = await fetch(backendUrl + "/auction-state", { cache: "no-store" });
+        var res = await fetch(backendUrl + "/auction-state", { cache: "no-store" });
         if (!res.ok) return;
-        const data = await res.json();
-        if (data.auction) {
-          lastState = data.auction;
-          renderAuction(lastState);
-        }
+        var data = await res.json();
+        if (data.auction) renderAuction(data.auction);
       } catch (e) {}
     }
 
@@ -245,7 +328,7 @@
       fetchState();
       setInterval(fetchState, 1000);
     } else {
-      root.innerHTML = '<div class="empty-auction">Backend URL tidak ditemukan. Tambahkan ?backend=URL di address bar.</div>';
+      root.innerHTML = '<div class="idle-wrap"><div class="idle-coin">🪙</div><div class="idle-title">LELANG</div><div class="idle-sub" style="color:#ff6b35">Backend URL tidak ditemukan. Tambahkan ?backend=URL di address bar.</div></div>';
     }
   </script>
 </body>
