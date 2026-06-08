@@ -636,6 +636,14 @@ function updateOverlayLink() {
   }
   el.overlayLink.href = overlayUrl.toString();
 
+  if (el.queueOverlayLink) {
+    const queueUrl = new URL("queue-overlay.html", window.location.href);
+    if (backendUrl) {
+      queueUrl.searchParams.set("backend", backendUrl);
+    }
+    el.queueOverlayLink.href = queueUrl.toString();
+  }
+
   if (el.auctionControlLink) {
     const auctionUrl = new URL("auction-control.html", window.location.href);
     if (backendUrl) {
@@ -684,9 +692,6 @@ function attachConnectionHandlers(conn) {
     maybeNotifyGiftBackground(msg);
     if (el.auctionToggle && el.auctionToggle.checked) {
       sendGiftToAuction(msg);
-    }
-    if (Number(msg.diamondCount || 0) >= 20) {
-      triggerBonusSpin(msg);
     }
   });
 
@@ -855,63 +860,6 @@ function sendGiftToAuction(msg) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ bidder, amount })
   }).catch(() => {});
-}
-
-const BONUS_SPIN_THRESHOLD = 20;
-let lastBonusSpinTime = 0;
-
-function triggerBonusSpin(msg) {
-  const coins = Number(msg.diamondCount || 0) * Math.max(1, Number(msg.repeatCount || 1));
-  if (coins < BONUS_SPIN_THRESHOLD) return;
-  const now = Date.now();
-  if (now - lastBonusSpinTime < 2000) return;
-  lastBonusSpinTime = now;
-
-  const bonusPool = getSpinPool("pool-mutasi");
-  if (!bonusPool || !bonusPool.items || bonusPool.items.length === 0) return;
-
-  const rollSequence = [];
-  const spinResults = {};
-  const spinQty = Math.max(1, Math.floor(coins / BONUS_SPIN_THRESHOLD));
-  for (let i = 0; i < spinQty; i++) {
-    const rolled = rollWeightedPool("pool-mutasi");
-    const label = rolled ? rolled.label : "Mutasi";
-    spinResults[label] = (spinResults[label] || 0) + 1;
-    rollSequence.push(label);
-  }
-
-  state.lastSpinEvent = {
-    id: generateId("spinEvent"),
-    time: Date.now(),
-    user: getDisplayLabel(msg),
-    tiktokId: msg.uniqueId || null,
-    giftName: msg.giftName || "gift",
-    giftQty: spinQty,
-    diamondCount: coins,
-    spinResults,
-    rollSequence,
-    finalLabel: summarizeSpinResults(spinResults, "pool-mutasi"),
-    poolId: "pool-mutasi"
-  };
-  syncOverlayState();
-
-  addJokiQueueEntry({
-    action: "BONUS: " + summarizeSpinResults(spinResults, "pool-mutasi"),
-    consolidateKey: `bonus:${msg.uniqueId || "unknown"}:${now}`,
-    user: getDisplayLabel(msg),
-    username: null,
-    tiktokId: msg.uniqueId || null,
-    giftName: msg.giftName || "gift",
-    diamondCount: Number(msg.diamondCount || 0),
-    qty: spinQty,
-    giftQty: spinQty,
-    source: "gift",
-    rewardMode: "spin",
-    spinResults,
-    poolId: "pool-mutasi",
-    ruleId: null,
-    unitCount: 1
-  });
 }
 
 function tryRegisterChatNumber(msg) {
@@ -2759,6 +2707,7 @@ function init() {
   el.usernameInput = $("usernameInput");
   el.backendInput = $("backendInput");
   el.overlayLink = $("overlayLink");
+  el.queueOverlayLink = $("queueOverlayLink");
   el.auctionControlLink = $("auctionControlLink");
   el.auctionToggle = $("auctionToggle");
   el.connectBtn = $("connectBtn");

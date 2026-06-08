@@ -10,9 +10,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=20260603-auction2">
+  <link rel="stylesheet" href="styles.css?v=20260608-cardfix1">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script src="app.js?v=20260603-auction2" defer></script>
+  <script src="app.js?v=20260608-cardfix1" defer></script>
 </head>
 <body>
   <div class="bg-orb orb-1"></div>
@@ -50,11 +50,12 @@
             <h2>Antrean</h2>
           </div>
           <div class="joki-panel-header-actions">
-            <label class="toggle auction-toggle" title="Auto-bid dari gift ke lelang">
+            <label class="auction-toggle" title="Auto-bid dari gift ke lelang">
               <input id="auctionToggle" type="checkbox">
-              <span>Lelang</span>
+              <span class="toggle-label">Lelang</span>
             </label>
-            <a id="overlayLink" class="ghost icon-btn panel-link-btn" href="overlay.html" target="_blank" rel="noopener noreferrer" title="Buka overlay OBS">Overlay</a>
+            <a id="overlayLink" class="ghost icon-btn panel-link-btn" href="overlay.html" target="_blank" rel="noopener noreferrer" title="Buka overlay OBS">Spin</a>
+            <a id="queueOverlayLink" class="ghost icon-btn panel-link-btn" href="queue-overlay.html" target="_blank" rel="noopener noreferrer" title="Buka overlay antrean OBS">Antrean</a>
             <a id="auctionControlLink" class="ghost icon-btn panel-link-btn" href="auction-control.html" target="_blank" rel="noopener noreferrer" title="Control lelang">Control</a>
             <button id="exportJokiBtn" class="ghost icon-btn" title="Export (TXT / JSON) dengan filter">Export ▾</button>
             <button id="importJokiBtn" class="ghost icon-btn" title="Import dari file JSON">Import</button>

@@ -361,15 +361,24 @@ button:hover:not(:disabled) {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 600;
   color: var(--muted);
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 8px;
+  padding: 3px 8px;
+  border-radius: 6px;
   border: 1px solid var(--border);
   background: transparent;
   transition: all 0.2s;
+  user-select: none;
+}
+
+.auction-toggle input[type="checkbox"] {
+  width: 12px;
+  height: 12px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  margin: 0;
 }
 
 .auction-toggle:has(input:checked) {
@@ -378,10 +387,8 @@ button:hover:not(:disabled) {
   color: var(--accent);
 }
 
-.auction-toggle input {
-  width: 14px;
-  height: 14px;
-  accent-color: var(--accent);
+.auction-toggle .toggle-label {
+  pointer-events: none;
 }
 
 .panel-link-btn {
@@ -720,153 +727,52 @@ button:hover:not(:disabled) {
 }
 
 .joki-list .list-item.joki-card {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px 8px;
-  padding: 7px 8px;
+  display: grid;
+  grid-template-columns: 52px 1fr auto;
+  gap: 4px 8px;
+  padding: 5px 8px;
   border-left: 3px solid #fbbf24;
-  transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
   background: #fffaf3;
-  flex-wrap: nowrap;
+  align-items: center;
 }
 
 .joki-list .list-item.joki-card:hover {
-  box-shadow: 0 4px 12px rgba(27, 27, 27, 0.08);
-  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(27, 27, 27, 0.06);
 }
 
-.joki-list .list-item.joki-card.status-pending {
-  border-left-color: #fbbf24;
-}
-
-.joki-list .list-item.joki-card.status-inProgress {
-  border-left-color: #10b981;
-  background: linear-gradient(90deg, rgba(16, 185, 129, 0.04), #fffaf3 30%);
-}
-
-.joki-list .list-item.joki-card.status-awaitingDelivery {
-  border-left-color: #3b82f6;
-  background: linear-gradient(90deg, rgba(59, 130, 246, 0.04), #fffaf3 30%);
-}
-
-.joki-list .list-item.joki-card.status-done {
-  border-left-color: #6b7280;
-  background: rgba(107, 114, 128, 0.04);
-  opacity: 0.82;
-}
+.joki-list .list-item.joki-card.status-pending { border-left-color: #fbbf24; }
+.joki-list .list-item.joki-card.status-inProgress { border-left-color: #10b981; }
+.joki-list .list-item.joki-card.status-awaitingDelivery { border-left-color: #3b82f6; }
+.joki-list .list-item.joki-card.status-done { border-left-color: #9ca3af; opacity: 0.65; }
 
 .joki-list .list-item.joki-card > .joki-header {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  flex: 0 0 auto;
-  min-width: 0;
-  gap: 4px;
-  padding-top: 1px;
-}
-
-.joki-list .list-item.joki-card > .joki-header.editing-action {
-  align-items: center;
-}
-
-.joki-list .list-item.joki-card > .joki-header.editing-action .joki-action-input {
-  width: 140px;
-  min-width: 100px;
-  font-family: var(--font-sans);
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: #183404;
-  background: #fff;
-  border: 1.5px solid rgba(143, 198, 79, 0.5);
-  border-radius: 6px;
-  padding: 3px 6px;
-  outline: none;
-}
-
-.joki-list .list-item.joki-card > .joki-header.editing-action .joki-action-input:focus {
-  border-color: #8fc64f;
-  box-shadow: 0 0 0 2px rgba(143, 198, 79, 0.18);
-}
-
-.joki-list .list-item.joki-card > .joki-header.editing-action .joki-action-save,
-.joki-list .list-item.joki-card > .joki-header.editing-action .joki-action-cancel {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--muted);
-  padding: 2px 6px;
-  font-size: 0.72rem;
-  border-radius: 4px;
-  cursor: pointer;
-  flex: 0 0 auto;
-}
-
-.joki-list .list-item.joki-card > .joki-header.editing-action .joki-action-save {
-  background: #8fc64f;
-  color: #183404;
-  border-color: #8fc64f;
-}
-
-.joki-list .list-item.joki-card > .joki-header.editing-action .joki-action-cancel:hover {
-  background: rgba(0, 0, 0, 0.04);
-  color: var(--ink);
+  gap: 2px;
+  min-width: 48px;
 }
 
 .joki-list .list-item.joki-card > .joki-body {
-  flex: 1 1 0;
   display: flex;
   align-items: center;
   gap: 4px 6px;
   min-width: 0;
-  overflow: visible;
   flex-wrap: wrap;
-  line-height: 1.35;
-}
-
-.joki-list .list-item.joki-card > .joki-body.editing-body {
-  gap: 3px 4px;
-}
-
-.joki-result-line {
-  align-items: center;
-  gap: 4px;
-  flex: 0 0 auto;
-}
-
-.joki-result-label {
-  color: #6d6154;
-  font-size: 0.72rem;
-  font-weight: 700;
-  flex: 0 0 auto;
 }
 
 .joki-list .list-item.joki-card > .joki-actions {
   display: flex;
   gap: 3px;
-  flex: 0 0 auto;
-  border: none;
-  padding: 0;
-  margin: 0;
-  padding-top: 1px;
+  align-items: center;
 }
 
 .joki-list .list-item.joki-card > .joki-actions button {
-  padding: 4px 8px;
-  font-size: 0.7rem;
-  border-radius: 6px;
+  padding: 3px 7px;
+  font-size: 0.68rem;
+  border-radius: 5px;
   white-space: nowrap;
-}
-
-.joki-display-name {
-  font-size: 0.9rem;
-}
-
-.joki-tiktok-id,
-.joki-gift,
-.joki-roblox-label,
-.joki-roblox-value,
-.joki-roblox-empty,
-.joki-notes-label,
-.joki-notes-text {
-  font-size: 0.8rem;
 }
 
 .joki-list .list-item.joki-card > .joki-actions button.primary-action {
@@ -877,28 +783,38 @@ button:hover:not(:disabled) {
 
 .joki-list .list-item.joki-card > .joki-actions button.danger-action {
   color: #b91c1c;
-  border-color: rgba(185, 28, 28, 0.2);
+  border-color: rgba(185, 28, 28, 0.15);
 }
 
 .joki-list .list-item.joki-card > .joki-actions button.danger-action:hover:not(:disabled) {
-  background: rgba(185, 28, 28, 0.06);
+  background: rgba(185, 28, 28, 0.05);
 }
 
 .tools-drawer {
   grid-column: 1 / -1;
   grid-row: 3;
   padding: 0;
-  overflow: hidden;
+  max-height: none;
 }
 
 .tools-drawer[open] {
-  overflow: visible;
+  max-height: 65vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.tools-drawer[open] > summary {
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 .tools-drawer-content {
-  max-height: 70vh;
+  flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 0 12px 12px;
+  min-height: 0;
 }
 
 .tools-drawer > summary {
@@ -908,17 +824,11 @@ button:hover:not(:disabled) {
   font-weight: 700;
   color: var(--muted);
   background: rgba(255, 255, 255, 0.32);
-  position: sticky;
-  top: 0;
-  z-index: 2;
+  flex-shrink: 0;
 }
 
 .tools-drawer > summary::-webkit-details-marker {
   display: none;
-}
-
-.tools-drawer[open] > summary {
-  border-bottom: 1px solid var(--border);
 }
 
 .nested-panel {
@@ -927,54 +837,27 @@ button:hover:not(:disabled) {
 
 .joki-list .empty-state {
   text-align: center;
-  padding: 32px 16px;
+  padding: 24px 16px;
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   background: rgba(0, 0, 0, 0.02);
   border: 1px dashed var(--border);
-  border-radius: 12px;
-}
-
-.joki-list .item-title {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.joki-list .item-text {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.joki-list .joki-line {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 4px 6px;
-  min-width: 0;
-  font-size: 0.85rem;
-  line-height: 1.45;
-  color: var(--ink);
+  border-radius: 10px;
 }
 
 .joki-list .joki-display-name {
   font-weight: 700;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   color: var(--ink);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 170px;
-  flex: 0 0 auto;
+  max-width: 130px;
 }
 
 .joki-list .joki-tiktok-id {
   color: var(--muted);
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 500;
   white-space: nowrap;
 }
@@ -982,54 +865,48 @@ button:hover:not(:disabled) {
 .joki-list .joki-gift {
   color: var(--accent-2);
   font-weight: 600;
-  font-size: 0.74rem;
+  font-size: 0.68rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 210px;
-}
-
-.joki-list .joki-roblox-label {
-  color: var(--muted);
-  font-size: 0.72rem;
-  font-weight: 600;
+  max-width: 150px;
 }
 
 .joki-list .joki-roblox-value {
   color: #08574f;
   font-weight: 700;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   cursor: text;
-  background: rgba(15, 157, 146, 0.10);
-  padding: 1px 6px;
+  background: rgba(15, 157, 146, 0.08);
+  padding: 1px 5px;
   border-radius: 4px;
-  border: 1px solid rgba(15, 157, 146, 0.18);
+  border: 1px solid rgba(15, 157, 146, 0.15);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 100px;
+  max-width: 90px;
 }
 
 .joki-list .joki-roblox-value:hover {
-  background: rgba(15, 157, 146, 0.18);
-  border-color: rgba(15, 157, 146, 0.35);
+  background: rgba(15, 157, 146, 0.15);
+  border-color: rgba(15, 157, 146, 0.3);
 }
 
 .joki-list .joki-roblox-empty {
   color: #0a6b62;
   font-style: italic;
   font-weight: 600;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   background: transparent;
-  border: 1px dashed rgba(15, 157, 146, 0.4);
-  cursor: text;
-  padding: 1px 6px;
+  border: 1px dashed rgba(15, 157, 146, 0.3);
+  cursor: pointer;
+  padding: 1px 5px;
   border-radius: 4px;
   white-space: nowrap;
 }
 
 .joki-list .joki-roblox-empty:hover {
-  background: rgba(15, 157, 146, 0.10);
+  background: rgba(15, 157, 146, 0.08);
 }
 
 .gift-item {
