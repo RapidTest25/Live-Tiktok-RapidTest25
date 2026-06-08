@@ -402,6 +402,7 @@ function saveState() {
     backendUrl: state.backendUrl
   };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  syncQueueState();
 }
 
 function loadState() {
@@ -662,6 +663,20 @@ async function syncOverlayState() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ lastSpinEvent: state.lastSpinEvent })
+    });
+  } catch (err) {
+  }
+}
+
+async function syncQueueState() {
+  const backendUrl = resolveBackendUrl();
+  if (!backendUrl) return;
+
+  try {
+    await fetch(`${backendUrl.replace(/\/$/, "")}/queue-state`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ queue: state.jokiQueue })
     });
   } catch (err) {
   }

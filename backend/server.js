@@ -223,6 +223,22 @@ app.post('/overlay-state', express.json({ limit: '64kb' }), (req, res) => {
     res.json({ ok: true });
 });
 
+// ===== Queue State =====
+let latestQueueState = [];
+
+app.get('/queue-state', (req, res) => {
+    res.json({
+        queue: latestQueueState,
+        timestamp: Date.now()
+    });
+});
+
+app.post('/queue-state', express.json({ limit: '256kb' }), (req, res) => {
+    const payload = req.body && typeof req.body === 'object' ? req.body.queue : null;
+    latestQueueState = Array.isArray(payload) ? payload : [];
+    res.json({ ok: true });
+});
+
 // ===== Auction System =====
 let auctionState = {
     title: '',
@@ -408,21 +424,11 @@ app.post('/auction/extend', express.json(), (req, res) => {
 // Serve frontend files
 app.use(express.static('public'));
 
-// Start http listener - try IPv6 first (cloudflared uses [::1]), fallback to IPv4
+// Start http listener on IPv4 (cloudflared connects to 127.0.0.1)
 const port = process.env.PORT || 8081;
 
-function onListen(host) {
-    console.info(`✅ Server running on ${host}:${port}`);
+httpServer.listen(port, '0.0.0.0', () => {
+    console.info(`✅ Server running on port ${port}`);
     console.info(`   Local:  http://localhost:${port}`);
     console.info(`   Health: http://localhost:${port}/health`);
-}
-
-httpServer.listen(port, '::', () => onListen('::'));
-httpServer.once('error', (err) => {
-    if (err.code === 'EADDRINUSE') {
-        console.error(`❌ Port ${port} already in use`);
-        process.exit(1);
-    }
-    console.warn(`⚠️  IPv6 (::) failed (${err.code}), trying 0.0.0.0...`);
-    httpServer.listen(port, '0.0.0.0', () => onListen('0.0.0.0'));
 });
