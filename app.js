@@ -635,6 +635,14 @@ function updateOverlayLink() {
     overlayUrl.searchParams.set("backend", backendUrl);
   }
   el.overlayLink.href = overlayUrl.toString();
+
+  if (el.auctionControlLink) {
+    const auctionUrl = new URL("auction-control.html", window.location.href);
+    if (backendUrl) {
+      auctionUrl.searchParams.set("backend", backendUrl);
+    }
+    el.auctionControlLink.href = auctionUrl.toString();
+  }
 }
 
 async function syncOverlayState() {
@@ -1138,13 +1146,33 @@ function giftNameMatchesRule(giftName, matchValue) {
 }
 
 function processGiftRules(msg) {
-  const pendingStreak = msg.giftType === 1 && !msg.repeatEnd;
-  if (pendingStreak) return;
-
   const giftName = normalizeKey(msg.giftName);
   const diamondCount = Number(msg.diamondCount || 0);
   const repeatCount = Math.max(1, Number(msg.repeatCount) || 1);
   const userLabel = msg.uniqueId ? `@${msg.uniqueId}` : (msg.nickname || "viewer");
+  const isStreak = msg.giftType === 1;
+  const isPendingStreak = isStreak && !msg.repeatEnd;
+
+  if (isPendingStreak) {
+    const streakKey = `streak:${msg.uniqueId || "unknown"}:${msg.giftId || msg.giftName}`;
+    addJokiQueueEntry({
+      action: `⏳ ${msg.giftName || "gift"} x${repeatCount}...`,
+      consolidateKey: streakKey,
+      user: getDisplayLabel(msg),
+      username: null,
+      tiktokId: msg.uniqueId || null,
+      giftName: msg.giftName || "gift",
+      diamondCount,
+      qty: 1,
+      giftQty: repeatCount,
+      source: "gift",
+      unmatched: true,
+      rewardMode: "direct",
+      ruleId: null,
+      unitCount: 1
+    });
+    return;
+  }
 
   const checkRule = (rule) => {
     if (rule.matchType === "diamond") {
@@ -1297,22 +1325,26 @@ function addJokiQueueEntry(entry) {
   const addedQty = Math.max(1, Number(entry.qty) || 1);
   const addedGiftQty = Math.max(1, Number(entry.giftQty) || addedQty);
   const addedCoinsTotal = (Number(entry.diamondCount) || 0) * addedGiftQty;
-  const matchKey = entry.unmatched
-    ? `${entry.giftName || "gift"}|${Number(entry.diamondCount) || 0}`
-    : (entry.action || `${entry.giftName || "gift"}|${Number(entry.diamondCount) || 0}`);
-  const consolidateKey = entry.consolidateKey || matchKey;
+  const consolidateKey = entry.consolidateKey
+    || entry.ruleId
+    || `${entry.giftName || "gift"}|${Number(entry.diamondCount) || 0}|${entry.tiktokId || "unknown"}`;
+  const matchKey = entry.matchKey || consolidateKey;
 
-  if (entry.source === "gift" && entry.tiktokId && entry.action) {
+  if (entry.source === "gift" && entry.tiktokId) {
     const existing = state.jokiQueue.find((item) =>
       item.source === "gift" &&
       item.tiktokId === entry.tiktokId &&
-      (item.consolidateKey || item.matchKey || item.action) === consolidateKey &&
+      (item.consolidateKey || item.matchKey) === consolidateKey &&
       item.status === "pending"
     );
     if (existing) {
       existing.qty = (Number(existing.qty) || 1) + addedQty;
       existing.giftQty = (Number(existing.giftQty) || Number(existing.qty) || 1) + addedGiftQty;
       existing.diamondCount = (Number(existing.diamondCount) || 0) + addedCoinsTotal;
+      existing.action = entry.action || existing.action;
+      existing.unmatched = typeof entry.unmatched === "boolean" ? entry.unmatched : existing.unmatched;
+      existing.ruleId = entry.ruleId || existing.ruleId;
+      existing.unitCount = entry.unitCount || existing.unitCount;
       if (entry.rewardMode === "spin") {
         existing.spinResults = addSpinResultCounts(existing.spinResults, entry.spinResults);
         existing.action = summarizeSpinResults(existing.spinResults, entry.poolId || existing.poolId);
@@ -1321,7 +1353,7 @@ function addJokiQueueEntry(entry) {
       existing.lastAddedAt = Date.now();
       saveState();
       renderJokiQueue();
-      showToast(`${entry.user} nambah +${addedQty} (total: ${existing.qty})`, "success");
+      showToast(`${entry.user} nambah +${addedQty} (total: ${existing.giftQty})`, "success");
       return;
     }
   }
@@ -1538,6 +1570,9 @@ function getJokiBadgeText(entry) {
       return "Sedang spin...";
     }
     return summarizeSpinResults(entry.spinResults, entry.poolId);
+  }
+  if (entry.action && String(entry.action).startsWith("⏳")) {
+    return entry.action.replace("⏳ ", "");
   }
   if (entry.unmatched) {
     return entry.giftName && entry.giftName !== "-" ? `${entry.giftName} belum diatur` : "Belum diatur";
@@ -2658,6 +2693,7 @@ function init() {
   el.usernameInput = $("usernameInput");
   el.backendInput = $("backendInput");
   el.overlayLink = $("overlayLink");
+  el.auctionControlLink = $("auctionControlLink");
   el.connectBtn = $("connectBtn");
   el.disconnectBtn = $("disconnectBtn");
   el.statusText = $("statusText");

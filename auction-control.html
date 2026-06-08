@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Control Lelang</title>
+  <style>
+    :root {
+      --bg: #f5f0e8;
+      --card: #fff8ee;
+      --ink: #1b1b1b;
+      --muted: #6d6154;
+      --accent: #ff6b35;
+      --accent-2: #0f9d92;
+      --border: rgba(27,27,27,0.08);
+      --radius: 14px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      padding: 16px;
+    }
+    h1 { font-size: 1.4rem; margin: 0 0 16px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+    .field { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 140px; }
+    .field label { font-size: 0.82rem; color: var(--muted); }
+    input, textarea, select {
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #fffaf3;
+      font-family: inherit;
+      font-size: 0.9rem;
+    }
+    textarea { resize: vertical; min-height: 40px; }
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 10px 18px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    button:hover:not(:disabled) { transform: translateY(-1px); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    button.primary { background: var(--accent); color: #fff; }
+    button.secondary { background: #2f2f2f; color: #fff; }
+    button.ghost { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+    button.success { background: var(--accent-2); color: #fff; }
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .status-bar {
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: rgba(255,107,53,0.08);
+      border: 1px solid rgba(255,107,53,0.15);
+      margin-bottom: 12px;
+      font-size: 0.9rem;
+    }
+    .status-bar.active { background: rgba(16,185,129,0.08); border-color: rgba(16,185,129,0.2); }
+    .status-bar .big { font-size: 1.8rem; font-weight: 900; color: var(--accent); }
+    .status-bar .gold { color: #b8860b; }
+    .link-box {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      background: #fffaf3;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 6px 10px;
+      font-size: 0.82rem;
+      word-break: break-all;
+    }
+    .link-box a { color: var(--accent-2); font-weight: 600; }
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 10px 16px;
+      border-radius: 10px;
+      background: #2f2f2f;
+      color: #fff;
+      font-size: 0.85rem;
+      z-index: 999;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .toast.show { opacity: 1; }
+    .bid-test { display: flex; gap: 6px; align-items: flex-end; }
+    .bid-test .field { min-width: 80px; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <h1>🔨 Control Lelang</h1>
+
+  <div class="status-bar" id="statusBar">
+    <div>Status: <strong id="statusText">Belum aktif</strong></div>
+    <div class="big" id="timerDisplay">0:00</div>
+    <div>Tertinggi: <strong class="gold" id="currentBidDisplay">0</strong> oleh <strong id="currentBidderDisplay">-</strong></div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin:0 0 10px">Pengaturan Lelang</h3>
+    <div class="row">
+      <div class="field">
+        <label>Judul Lelang</label>
+        <input id="auctionTitle" type="text" placeholder="Nama item lelang">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Deskripsi (opsional)</label>
+        <textarea id="auctionDesc" placeholder="Deskripsi item..."></textarea>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field" style="max-width:150px">
+        <label>Minimum Bid</label>
+        <input id="minBid" type="number" min="0" value="100">
+      </div>
+      <div class="field" style="max-width:150px">
+        <label>Timer (detik)</label>
+        <input id="timerSeconds" type="number" min="10" value="60">
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="primary" id="saveConfigBtn">Simpan Pengaturan</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin:0 0 10px">Kontrol</h3>
+    <div class="btn-row">
+      <button class="success" id="startBtn">▶ Mulai</button>
+      <button class="ghost" id="pauseBtn">⏸ Jeda</button>
+      <button class="secondary" id="stopBtn">⏹ Stop</button>
+      <button class="ghost" id="resetBtn">↺ Reset</button>
+      <button class="ghost" id="extendBtn">+10s</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin:0 0 10px">Test Bid (simulasi)</h3>
+    <div class="bid-test">
+      <div class="field">
+        <label>Bidder</label>
+        <input id="testBidder" type="text" placeholder="Nama" value="TestUser">
+      </div>
+      <div class="field">
+        <label>Jumlah</label>
+        <input id="testAmount" type="number" min="0" value="150">
+      </div>
+      <button class="primary" id="testBidBtn">Bid</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin:0 0 10px">Link OBS Overlay</h3>
+    <div class="link-box">
+      <a id="overlayLink" href="#" target="_blank">-</a>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const backendUrl = (params.get("backend") || "").replace(/\/$/, "");
+
+    function $(id) { return document.getElementById(id); }
+
+    function showToast(msg, type) {
+      const t = $("toast");
+      t.textContent = msg;
+      t.classList.add("show");
+      setTimeout(() => t.classList.remove("show"), 2500);
+    }
+
+    function formatTime(seconds) {
+      const m = Math.floor(seconds / 60);
+      const s = seconds % 60;
+      return m > 0 ? `${m}:${String(s).padStart(2, "0")}` : `0:${String(s).padStart(2, "0")}`;
+    }
+
+    function formatNumber(n) {
+      return Number(n || 0).toLocaleString("id-ID");
+    }
+
+    async function apiPost(path, body) {
+      try {
+        const res = await fetch(backendUrl + path, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body || {})
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Gagal");
+        showToast("OK", "success");
+        return data;
+      } catch (e) {
+        showToast("Error: " + e.message, "error");
+        return null;
+      }
+    }
+
+    function updateStatus(state) {
+      if (!state) return;
+      const bar = $("statusBar");
+      bar.className = "status-bar" + (state.isActive ? " active" : "");
+      $("statusText").textContent = state.isActive
+        ? (state.isPaused ? "PAUSED" : "LIVE")
+        : (state.startedAt ? "SELESAI" : "Belum aktif");
+      $("timerDisplay").textContent = formatTime(state.timerRemaining || 0);
+      $("currentBidDisplay").textContent = formatNumber(state.currentBid);
+      $("currentBidderDisplay").textContent = state.currentBidder || "-";
+      $("pauseBtn").textContent = state.isPaused ? "▶ Lanjut" : "⏸ Jeda";
+    }
+
+    async function fetchState() {
+      if (!backendUrl) return;
+      try {
+        const res = await fetch(backendUrl + "/auction-state", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.auction) updateStatus(data.auction);
+      } catch (e) {}
+    }
+
+    function init() {
+      if (!backendUrl) {
+        $("statusText").textContent = "Backend URL tidak ditemukan";
+        return;
+      }
+
+      const overlayUrl = new URL("auction.html", window.location.href);
+      overlayUrl.searchParams.set("backend", backendUrl);
+      $("overlayLink").href = overlayUrl.toString();
+      $("overlayLink").textContent = overlayUrl.toString();
+
+      $("saveConfigBtn").addEventListener("click", () => {
+        apiPost("/auction/config", {
+          title: $("auctionTitle").value,
+          description: $("auctionDesc").value,
+          minBid: Number($("minBid").value) || 0,
+          timerSeconds: Number($("timerSeconds").value) || 60
+        });
+      });
+
+      $("startBtn").addEventListener("click", () => apiPost("/auction/start"));
+      $("pauseBtn").addEventListener("click", () => apiPost("/auction/pause"));
+      $("stopBtn").addEventListener("click", () => apiPost("/auction/stop"));
+      $("resetBtn").addEventListener("click", () => apiPost("/auction/reset"));
+      $("extendBtn").addEventListener("click", () => apiPost("/auction/extend", { seconds: 10 }));
+      $("testBidBtn").addEventListener("click", () => {
+        apiPost("/auction/bid", {
+          bidder: $("testBidder").value || "TestUser",
+          amount: Number($("testAmount").value) || 0
+        });
+      });
+
+      fetchState();
+      setInterval(fetchState, 1000);
+    }
+
+    document.addEventListener("DOMContentLoaded", init);
+  </script>
+</body>
+</html>

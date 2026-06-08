@@ -223,6 +223,146 @@ app.post('/overlay-state', express.json({ limit: '64kb' }), (req, res) => {
     res.json({ ok: true });
 });
 
+// ===== Auction System =====
+let auctionState = {
+    title: '',
+    description: '',
+    minBid: 0,
+    currentBid: 0,
+    currentBidder: '',
+    bidHistory: [],
+    timerSeconds: 60,
+    timerRemaining: 0,
+    isActive: false,
+    isPaused: false,
+    startedAt: null,
+    lastBidAt: null
+};
+
+let auctionTimerInterval = null;
+
+function startAuctionTimer() {
+    if (auctionTimerInterval) clearInterval(auctionTimerInterval);
+    auctionTimerInterval = setInterval(() => {
+        if (auctionState.isActive && !auctionState.isPaused && auctionState.timerRemaining > 0) {
+            auctionState.timerRemaining -= 1;
+            if (auctionState.timerRemaining <= 0) {
+                auctionState.isActive = false;
+                auctionState.timerRemaining = 0;
+                io.emit('auction-ended', auctionState);
+            }
+            io.emit('auction-tick', auctionState);
+        }
+    }, 1000);
+}
+
+app.get('/auction-state', (req, res) => {
+    res.json({ auction: auctionState, timestamp: Date.now() });
+});
+
+app.post('/auction/config', express.json(), (req, res) => {
+    const { title, description, minBid, timerSeconds } = req.body || {};
+    if (typeof title === 'string') auctionState.title = title;
+    if (typeof description === 'string') auctionState.description = description;
+    if (typeof minBid === 'number' && minBid >= 0) auctionState.minBid = minBid;
+    if (typeof timerSeconds === 'number' && timerSeconds > 0) auctionState.timerSeconds = timerSeconds;
+    res.json({ ok: true, auction: auctionState });
+});
+
+app.post('/auction/start', express.json(), (req, res) => {
+    if (auctionState.isActive && !auctionState.isPaused) {
+        return res.status(400).json({ error: 'Auction already active' });
+    }
+    if (auctionState.isPaused) {
+        auctionState.isPaused = false;
+    } else {
+        auctionState.currentBid = auctionState.minBid;
+        auctionState.currentBidder = '';
+        auctionState.bidHistory = [];
+        auctionState.timerRemaining = auctionState.timerSeconds;
+        auctionState.startedAt = Date.now();
+    }
+    auctionState.isActive = true;
+    startAuctionTimer();
+    io.emit('auction-started', auctionState);
+    res.json({ ok: true, auction: auctionState });
+});
+
+app.post('/auction/pause', express.json(), (req, res) => {
+    if (!auctionState.isActive) {
+        return res.status(400).json({ error: 'Auction not active' });
+    }
+    auctionState.isPaused = !auctionState.isPaused;
+    io.emit('auction-tick', auctionState);
+    res.json({ ok: true, auction: auctionState });
+});
+
+app.post('/auction/stop', express.json(), (req, res) => {
+    auctionState.isActive = false;
+    auctionState.isPaused = false;
+    auctionState.timerRemaining = 0;
+    if (auctionTimerInterval) clearInterval(auctionTimerInterval);
+    io.emit('auction-ended', auctionState);
+    res.json({ ok: true, auction: auctionState });
+});
+
+app.post('/auction/reset', express.json(), (req, res) => {
+    auctionState = {
+        title: '',
+        description: '',
+        minBid: 0,
+        currentBid: 0,
+        currentBidder: '',
+        bidHistory: [],
+        timerSeconds: 60,
+        timerRemaining: 0,
+        isActive: false,
+        isPaused: false,
+        startedAt: null,
+        lastBidAt: null
+    };
+    if (auctionTimerInterval) clearInterval(auctionTimerInterval);
+    io.emit('auction-reset', auctionState);
+    res.json({ ok: true, auction: auctionState });
+});
+
+app.post('/auction/bid', express.json(), (req, res) => {
+    const { bidder, amount } = req.body || {};
+    if (!auctionState.isActive || auctionState.isPaused) {
+        return res.status(400).json({ error: 'Auction not active' });
+    }
+    if (!bidder || typeof amount !== 'number') {
+        return res.status(400).json({ error: 'Missing bidder or amount' });
+    }
+    if (amount <= auctionState.currentBid) {
+        return res.status(400).json({ error: `Bid must be higher than ${auctionState.currentBid}` });
+    }
+    auctionState.currentBid = amount;
+    auctionState.currentBidder = bidder;
+    auctionState.lastBidAt = Date.now();
+    auctionState.bidHistory.push({
+        bidder,
+        amount,
+        time: Date.now()
+    });
+    if (auctionState.bidHistory.length > 50) {
+        auctionState.bidHistory = auctionState.bidHistory.slice(-50);
+    }
+    io.emit('auction-bid', auctionState);
+    res.json({ ok: true, auction: auctionState });
+});
+
+app.post('/auction/extend', express.json(), (req, res) => {
+    const { seconds } = req.body || {};
+    if (!auctionState.isActive) {
+        return res.status(400).json({ error: 'Auction not active' });
+    }
+    const ext = Math.max(1, Math.min(300, Number(seconds) || 10));
+    auctionState.timerRemaining += ext;
+    io.emit('auction-tick', auctionState);
+    res.json({ ok: true, auction: auctionState });
+});
+
 // Serve frontend files
 app.use(express.static('public'));
 
