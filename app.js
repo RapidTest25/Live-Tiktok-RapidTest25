@@ -1153,26 +1153,7 @@ function processGiftRules(msg) {
   const isStreak = msg.giftType === 1;
   const isPendingStreak = isStreak && !msg.repeatEnd;
 
-  if (isPendingStreak) {
-    const streakKey = `streak:${msg.uniqueId || "unknown"}:${msg.giftId || msg.giftName}`;
-    addJokiQueueEntry({
-      action: `⏳ ${msg.giftName || "gift"} x${repeatCount}...`,
-      consolidateKey: streakKey,
-      user: getDisplayLabel(msg),
-      username: null,
-      tiktokId: msg.uniqueId || null,
-      giftName: msg.giftName || "gift",
-      diamondCount,
-      qty: 1,
-      giftQty: repeatCount,
-      source: "gift",
-      unmatched: true,
-      rewardMode: "direct",
-      ruleId: null,
-      unitCount: 1
-    });
-    return;
-  }
+  const stableKey = `${msg.giftName || "gift"}|${diamondCount}|${msg.uniqueId || "unknown"}`;
 
   const checkRule = (rule) => {
     if (rule.matchType === "diamond") {
@@ -1191,19 +1172,20 @@ function processGiftRules(msg) {
     if (rewardQty <= 0) return;
     addJokiQueueEntry({
       action: rule.rewardAction || rule.action,
-      consolidateKey: (options && options.consolidateKey) || (rule.id || rule.action || `${msg.giftName || "gift"}|${diamondCount}`),
+      consolidateKey: stableKey,
       user: getDisplayLabel(msg),
       username: null,
       tiktokId: msg.uniqueId || null,
       giftName: msg.giftName || "gift",
       diamondCount,
       qty: rewardQty,
-      giftQty: (options && options.giftQty) || rewardQty,
+      giftQty: (options && options.giftQty) || repeatCount,
       source: "gift",
       unmatched: !!(options && options.unmatched),
       rewardMode: "direct",
       ruleId: rule.id || null,
-      unitCount: Number(rule.unitCount) || 1
+      unitCount: Number(rule.unitCount) || 1,
+      isCumulative: isStreak
     });
   };
 
@@ -1235,19 +1217,21 @@ function processGiftRules(msg) {
 
     addJokiQueueEntry({
       action: summarizeSpinResults(spinResults, rule.poolId),
-      consolidateKey: rule.id || `spin:${rule.poolId || giftName}`,
+      consolidateKey: stableKey,
       user: getDisplayLabel(msg),
       username: null,
       tiktokId: msg.uniqueId || null,
       giftName: msg.giftName || "gift",
       diamondCount,
       qty: spinQty,
+      giftQty: repeatCount,
       source: "gift",
       rewardMode: "spin",
       spinResults,
       poolId: rule.poolId || null,
       ruleId: rule.id || null,
-      unitCount: Number(rule.unitCount) || 1
+      unitCount: Number(rule.unitCount) || 1,
+      isCumulative: isStreak
     });
 
     setTimeout(() => {
@@ -1339,8 +1323,13 @@ function addJokiQueueEntry(entry) {
     );
     if (existing) {
       existing.qty = (Number(existing.qty) || 1) + addedQty;
-      existing.giftQty = (Number(existing.giftQty) || Number(existing.qty) || 1) + addedGiftQty;
-      existing.diamondCount = (Number(existing.diamondCount) || 0) + addedCoinsTotal;
+      if (entry.isCumulative) {
+        existing.giftQty = addedGiftQty;
+        existing.diamondCount = addedCoinsTotal;
+      } else {
+        existing.giftQty = (Number(existing.giftQty) || Number(existing.qty) || 1) + addedGiftQty;
+        existing.diamondCount = (Number(existing.diamondCount) || 0) + addedCoinsTotal;
+      }
       existing.action = entry.action || existing.action;
       existing.unmatched = typeof entry.unmatched === "boolean" ? entry.unmatched : existing.unmatched;
       existing.ruleId = entry.ruleId || existing.ruleId;
