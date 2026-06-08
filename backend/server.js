@@ -227,16 +227,21 @@ app.post('/overlay-state', express.json({ limit: '64kb' }), (req, res) => {
 let auctionState = {
     title: '',
     description: '',
+    customText: '',
     minBid: 0,
     currentBid: 0,
     currentBidder: '',
     bidHistory: [],
+    participants: {},
     timerSeconds: 60,
     timerRemaining: 0,
+    snipeThreshold: 10,
+    snipeExtend: 10,
     isActive: false,
     isPaused: false,
     startedAt: null,
-    lastBidAt: null
+    lastBidAt: null,
+    snipeCount: 0
 };
 
 let auctionTimerInterval = null;
@@ -256,16 +261,65 @@ function startAuctionTimer() {
     }, 1000);
 }
 
+function getTopBidders() {
+    const entries = Object.entries(auctionState.participants);
+    return entries
+        .sort((a, b) => b[1].totalAmount - a[1].totalAmount)
+        .slice(0, 3)
+        .map(([name, data]) => ({ name, totalAmount: data.totalAmount, bidCount: data.bidCount }));
+}
+
+function placeAuctionBid(bidder, amount) {
+    if (!auctionState.isActive || auctionState.isPaused) {
+        return { error: 'Auction not active' };
+    }
+    if (!bidder || typeof amount !== 'number') {
+        return { error: 'Missing bidder or amount' };
+    }
+    if (amount <= auctionState.currentBid) {
+        return { error: `Bid must be higher than ${auctionState.currentBid}` };
+    }
+
+    auctionState.currentBid = amount;
+    auctionState.currentBidder = bidder;
+    auctionState.lastBidAt = Date.now();
+    auctionState.bidHistory.push({ bidder, amount, time: Date.now() });
+    if (auctionState.bidHistory.length > 100) {
+        auctionState.bidHistory = auctionState.bidHistory.slice(-100);
+    }
+
+    if (!auctionState.participants[bidder]) {
+        auctionState.participants[bidder] = { totalAmount: 0, bidCount: 0 };
+    }
+    auctionState.participants[bidder].totalAmount += amount;
+    auctionState.participants[bidder].bidCount += 1;
+
+    if (auctionState.timerRemaining <= auctionState.snipeThreshold && auctionState.snipeExtend > 0) {
+        auctionState.timerRemaining += auctionState.snipeExtend;
+        auctionState.snipeCount += 1;
+    }
+
+    io.emit('auction-bid', auctionState);
+    return { ok: true, auction: auctionState };
+}
+
 app.get('/auction-state', (req, res) => {
-    res.json({ auction: auctionState, timestamp: Date.now() });
+    res.json({
+        auction: auctionState,
+        topBidders: getTopBidders(),
+        timestamp: Date.now()
+    });
 });
 
 app.post('/auction/config', express.json(), (req, res) => {
-    const { title, description, minBid, timerSeconds } = req.body || {};
+    const { title, description, customText, minBid, timerSeconds, snipeThreshold, snipeExtend } = req.body || {};
     if (typeof title === 'string') auctionState.title = title;
     if (typeof description === 'string') auctionState.description = description;
+    if (typeof customText === 'string') auctionState.customText = customText;
     if (typeof minBid === 'number' && minBid >= 0) auctionState.minBid = minBid;
     if (typeof timerSeconds === 'number' && timerSeconds > 0) auctionState.timerSeconds = timerSeconds;
+    if (typeof snipeThreshold === 'number' && snipeThreshold >= 0) auctionState.snipeThreshold = snipeThreshold;
+    if (typeof snipeExtend === 'number' && snipeExtend >= 0) auctionState.snipeExtend = snipeExtend;
     res.json({ ok: true, auction: auctionState });
 });
 
@@ -279,8 +333,10 @@ app.post('/auction/start', express.json(), (req, res) => {
         auctionState.currentBid = auctionState.minBid;
         auctionState.currentBidder = '';
         auctionState.bidHistory = [];
+        auctionState.participants = {};
         auctionState.timerRemaining = auctionState.timerSeconds;
         auctionState.startedAt = Date.now();
+        auctionState.snipeCount = 0;
     }
     auctionState.isActive = true;
     startAuctionTimer();
@@ -308,18 +364,10 @@ app.post('/auction/stop', express.json(), (req, res) => {
 
 app.post('/auction/reset', express.json(), (req, res) => {
     auctionState = {
-        title: '',
-        description: '',
-        minBid: 0,
-        currentBid: 0,
-        currentBidder: '',
-        bidHistory: [],
-        timerSeconds: 60,
-        timerRemaining: 0,
-        isActive: false,
-        isPaused: false,
-        startedAt: null,
-        lastBidAt: null
+        title: '', description: '', customText: '', minBid: 0,
+        currentBid: 0, currentBidder: '', bidHistory: [], participants: {},
+        timerSeconds: 60, timerRemaining: 0, snipeThreshold: 10, snipeExtend: 10,
+        isActive: false, isPaused: false, startedAt: null, lastBidAt: null, snipeCount: 0
     };
     if (auctionTimerInterval) clearInterval(auctionTimerInterval);
     io.emit('auction-reset', auctionState);
@@ -328,28 +376,19 @@ app.post('/auction/reset', express.json(), (req, res) => {
 
 app.post('/auction/bid', express.json(), (req, res) => {
     const { bidder, amount } = req.body || {};
+    const result = placeAuctionBid(bidder, amount);
+    if (result.error) return res.status(400).json(result);
+    res.json(result);
+});
+
+app.post('/auction/gift-bid', express.json(), (req, res) => {
+    const { bidder, amount } = req.body || {};
     if (!auctionState.isActive || auctionState.isPaused) {
-        return res.status(400).json({ error: 'Auction not active' });
+        return res.json({ ok: false, reason: 'not_active' });
     }
-    if (!bidder || typeof amount !== 'number') {
-        return res.status(400).json({ error: 'Missing bidder or amount' });
-    }
-    if (amount <= auctionState.currentBid) {
-        return res.status(400).json({ error: `Bid must be higher than ${auctionState.currentBid}` });
-    }
-    auctionState.currentBid = amount;
-    auctionState.currentBidder = bidder;
-    auctionState.lastBidAt = Date.now();
-    auctionState.bidHistory.push({
-        bidder,
-        amount,
-        time: Date.now()
-    });
-    if (auctionState.bidHistory.length > 50) {
-        auctionState.bidHistory = auctionState.bidHistory.slice(-50);
-    }
-    io.emit('auction-bid', auctionState);
-    res.json({ ok: true, auction: auctionState });
+    const result = placeAuctionBid(bidder, amount);
+    if (result.error) return res.json({ ok: false, reason: result.error });
+    res.json(result);
 });
 
 app.post('/auction/extend', express.json(), (req, res) => {

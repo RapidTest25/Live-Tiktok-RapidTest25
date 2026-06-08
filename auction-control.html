@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Control Lelang</title>
+  <title>Control Panel</title>
   <style>
     :root {
       --bg: #f5f0e8;
@@ -23,34 +23,37 @@
       color: var(--ink);
       background: var(--bg);
       padding: 16px;
-      max-width: 520px;
+      max-width: 540px;
       margin: 0 auto;
     }
-    h1 { font-size: 1.3rem; margin: 0 0 14px; display: flex; align-items: center; gap: 8px; }
+    h1 { font-size: 1.25rem; margin: 0 0 14px; display: flex; align-items: center; gap: 8px; }
     .card {
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 16px;
-      margin-bottom: 12px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
     }
-    .row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
-    .field { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 140px; }
-    .field label { font-size: 0.82rem; color: var(--muted); }
+    .card h3 { margin: 0 0 10px; font-size: 0.95rem; }
+    .row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+    .field { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 120px; }
+    .field label { font-size: 0.78rem; color: var(--muted); }
+    .field.small { max-width: 120px; flex: 0 0 120px; }
     input, textarea, select {
-      padding: 8px 10px;
-      border-radius: 10px;
+      padding: 7px 9px;
+      border-radius: 8px;
       border: 1px solid var(--border);
       background: #fffaf3;
       font-family: inherit;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
     }
-    textarea { resize: vertical; min-height: 40px; }
+    textarea { resize: vertical; min-height: 36px; }
     button {
       border: none;
       border-radius: 999px;
-      padding: 10px 18px;
+      padding: 8px 16px;
       font-weight: 600;
+      font-size: 0.82rem;
       cursor: pointer;
       transition: transform 0.15s, box-shadow 0.15s;
     }
@@ -60,109 +63,157 @@
     button.secondary { background: #2f2f2f; color: #fff; }
     button.ghost { background: transparent; border: 1px solid var(--border); color: var(--muted); }
     button.success { background: var(--accent-2); color: #fff; }
-    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn-row { display: flex; gap: 6px; flex-wrap: wrap; }
+
     .status-bar {
-      padding: 12px 16px;
+      padding: 12px 14px;
       border-radius: 10px;
-      background: rgba(255,107,53,0.08);
-      border: 1px solid rgba(255,107,53,0.15);
-      margin-bottom: 12px;
-      font-size: 0.9rem;
+      background: rgba(255,107,53,0.06);
+      border: 1px solid rgba(255,107,53,0.12);
+      margin-bottom: 10px;
     }
-    .status-bar.active { background: rgba(16,185,129,0.08); border-color: rgba(16,185,129,0.2); }
+    .status-bar.active { background: rgba(16,185,129,0.06); border-color: rgba(16,185,129,0.15); }
     .status-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 6px;
+      gap: 10px;
+      margin-bottom: 4px;
     }
     .status-row:last-child { margin-bottom: 0; }
     .status-bar .big {
-      font-size: 1.4rem;
+      font-size: 1.3rem;
       font-weight: 900;
       color: var(--accent);
       font-variant-numeric: tabular-nums;
-      min-width: 60px;
+      min-width: 50px;
       text-align: right;
     }
     .status-bar .gold { color: #b8860b; font-weight: 700; }
+
+    .top-bidders {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px dashed var(--border);
+    }
+    .top-bidders h4 { margin: 0 0 6px; font-size: 0.78rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+    .bidder-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 8px;
+      border-radius: 6px;
+      background: rgba(255,215,0,0.05);
+      margin-bottom: 3px;
+      font-size: 0.82rem;
+    }
+    .bidder-row .rank { font-weight: 800; color: var(--accent); min-width: 24px; }
+    .bidder-row .name { flex: 1; font-weight: 600; }
+    .bidder-row .amount { color: #b8860b; font-weight: 700; }
+
     .link-box {
       display: flex;
       gap: 6px;
       align-items: center;
       background: #fffaf3;
       border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 6px 10px;
-      font-size: 0.82rem;
+      border-radius: 8px;
+      padding: 6px 8px;
+      font-size: 0.78rem;
       word-break: break-all;
     }
-    .link-box a { color: var(--accent-2); font-weight: 600; }
+    .link-box a { color: var(--accent-2); font-weight: 600; text-decoration: none; }
+
     .toast {
       position: fixed;
-      bottom: 20px;
-      right: 20px;
-      padding: 10px 16px;
-      border-radius: 10px;
+      bottom: 16px;
+      right: 16px;
+      padding: 8px 14px;
+      border-radius: 8px;
       background: #2f2f2f;
       color: #fff;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       z-index: 999;
       opacity: 0;
       transition: opacity 0.3s;
     }
     .toast.show { opacity: 1; }
-    .bid-test { display: flex; gap: 6px; align-items: flex-end; }
-    .bid-test .field { min-width: 80px; }
-    .hidden { display: none; }
+    .error-banner {
+      background: rgba(239,68,68,0.08);
+      border: 1px solid rgba(239,68,68,0.2);
+      color: #dc2626;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      margin-bottom: 10px;
+    }
   </style>
 </head>
 <body>
-  <h1>🔨 Control Lelang</h1>
+  <h1>🔨 Control Panel</h1>
+
+  <div id="errorBanner" class="error-banner" style="display:none"></div>
 
   <div class="status-bar" id="statusBar">
     <div class="status-row">
-      <span>Status: <strong id="statusText">Belum aktif</strong></span>
-      <span class="big" id="timerDisplay">0:00</span>
+      <span>Status: <strong id="statusText">-</strong></span>
+      <span class="big" id="timerDisplay">00:00</span>
     </div>
     <div class="status-row">
-      <span>Tertinggi: <span class="gold" id="currentBidDisplay">0</span></span>
+      <span>🪙 <span class="gold" id="currentBidDisplay">0</span></span>
       <span>oleh <strong id="currentBidderDisplay">-</strong></span>
+    </div>
+    <div id="topBiddersSection" class="top-bidders" style="display:none">
+      <h4>Top 3</h4>
+      <div id="topBiddersList"></div>
     </div>
   </div>
 
   <div class="card">
-    <h3 style="margin:0 0 10px">Pengaturan Lelang</h3>
+    <h3>Pengaturan</h3>
     <div class="row">
       <div class="field">
-        <label>Judul Lelang</label>
-        <input id="auctionTitle" type="text" placeholder="Nama item lelang">
+        <label>Judul</label>
+        <input id="auctionTitle" type="text" placeholder="Judul event">
       </div>
     </div>
     <div class="row">
       <div class="field">
-        <label>Deskripsi (opsional)</label>
-        <textarea id="auctionDesc" placeholder="Deskripsi item..."></textarea>
+        <label>Deskripsi</label>
+        <textarea id="auctionDesc" placeholder="Deskripsi..."></textarea>
       </div>
     </div>
     <div class="row">
-      <div class="field" style="max-width:150px">
-        <label>Minimum Bid</label>
+      <div class="field">
+        <label>Text Custom (tampil di OBS)</label>
+        <input id="customText" type="text" placeholder="Text tambahan...">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field small">
+        <label>Min Bid</label>
         <input id="minBid" type="number" min="0" value="100">
       </div>
-      <div class="field" style="max-width:150px">
+      <div class="field small">
         <label>Timer (detik)</label>
         <input id="timerSeconds" type="number" min="10" value="60">
       </div>
+      <div class="field small">
+        <label>Snipe (detik)</label>
+        <input id="snipeThreshold" type="number" min="0" value="10" title="Jika bid masuk saat timer di bawah ini, waktu otomatis bertambah">
+      </div>
+      <div class="field small">
+        <label>+Waktu</label>
+        <input id="snipeExtend" type="number" min="0" value="10" title="Detik yang ditambah saat snipe">
+      </div>
     </div>
     <div class="btn-row">
-      <button class="primary" id="saveConfigBtn">Simpan Pengaturan</button>
+      <button class="primary" id="saveConfigBtn">💾 Simpan</button>
     </div>
   </div>
 
   <div class="card">
-    <h3 style="margin:0 0 10px">Kontrol</h3>
+    <h3>Kontrol</h3>
     <div class="btn-row">
       <button class="success" id="startBtn">▶ Mulai</button>
       <button class="ghost" id="pauseBtn">⏸ Jeda</button>
@@ -173,22 +224,22 @@
   </div>
 
   <div class="card">
-    <h3 style="margin:0 0 10px">Test Bid (simulasi)</h3>
-    <div class="bid-test">
+    <h3>Test Bid</h3>
+    <div class="row">
       <div class="field">
         <label>Bidder</label>
         <input id="testBidder" type="text" placeholder="Nama" value="TestUser">
       </div>
-      <div class="field">
+      <div class="field small">
         <label>Jumlah</label>
         <input id="testAmount" type="number" min="0" value="150">
       </div>
-      <button class="primary" id="testBidBtn">Bid</button>
+      <button class="primary" id="testBidBtn" style="align-self:flex-end">Bid</button>
     </div>
   </div>
 
   <div class="card">
-    <h3 style="margin:0 0 10px">Link OBS Overlay</h3>
+    <h3>Link OBS</h3>
     <div class="link-box">
       <a id="overlayLink" href="#" target="_blank">-</a>
     </div>
@@ -197,22 +248,37 @@
   <div class="toast" id="toast"></div>
 
   <script>
+    const STORAGE_KEY = "tiktok_live_tool_state_v1";
     const params = new URLSearchParams(window.location.search);
-    const backendUrl = (params.get("backend") || "").replace(/\/$/, "");
+
+    function getBackendUrl() {
+      var fromParams = params.get("backend");
+      if (fromParams) return fromParams.replace(/\/$/, "");
+      try {
+        var raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          var parsed = JSON.parse(raw);
+          if (parsed.backendUrl) return parsed.backendUrl.replace(/\/$/, "");
+        }
+      } catch (e) {}
+      return "";
+    }
+
+    var backendUrl = getBackendUrl();
 
     function $(id) { return document.getElementById(id); }
 
-    function showToast(msg, type) {
-      const t = $("toast");
+    function showToast(msg) {
+      var t = $("toast");
       t.textContent = msg;
       t.classList.add("show");
-      setTimeout(() => t.classList.remove("show"), 2500);
+      setTimeout(function() { t.classList.remove("show"); }, 2000);
     }
 
     function formatTime(seconds) {
-      const m = Math.floor(seconds / 60);
-      const s = seconds % 60;
-      return m > 0 ? `${m}:${String(s).padStart(2, "0")}` : `0:${String(s).padStart(2, "0")}`;
+      var m = Math.floor(seconds / 60);
+      var s = seconds % 60;
+      return (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
     }
 
     function formatNumber(n) {
@@ -220,71 +286,100 @@
     }
 
     async function apiPost(path, body) {
+      if (!backendUrl) {
+        $("errorBanner").style.display = "block";
+        $("errorBanner").textContent = "Backend URL tidak ditemukan. Buka dashboard utama dulu, atau tambahkan ?backend=URL di address bar.";
+        return null;
+      }
+      $("errorBanner").style.display = "none";
       try {
-        const res = await fetch(backendUrl + path, {
+        var res = await fetch(backendUrl + path, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body || {})
         });
-        const data = await res.json();
+        var data = await res.json();
         if (!res.ok) throw new Error(data.error || "Gagal");
-        showToast("OK", "success");
+        showToast("OK ✓");
         return data;
       } catch (e) {
-        showToast("Error: " + e.message, "error");
+        showToast("Error: " + e.message);
         return null;
       }
     }
 
-    function updateStatus(state) {
-      if (!state) return;
-      const bar = $("statusBar");
+    function updateStatus(data) {
+      if (!data) return;
+      var state = data.auction || data;
+      var topBidders = data.topBidders || [];
+
+      var bar = $("statusBar");
       bar.className = "status-bar" + (state.isActive ? " active" : "");
       $("statusText").textContent = state.isActive
         ? (state.isPaused ? "PAUSED" : "LIVE")
-        : (state.startedAt ? "SELESAI" : "Belum aktif");
+        : (state.startedAt ? "SELESAI" : "Siap");
       $("timerDisplay").textContent = formatTime(state.timerRemaining || 0);
       $("currentBidDisplay").textContent = formatNumber(state.currentBid);
       $("currentBidderDisplay").textContent = state.currentBidder || "-";
       $("pauseBtn").textContent = state.isPaused ? "▶ Lanjut" : "⏸ Jeda";
+
+      if (topBidders.length > 0) {
+        $("topBiddersSection").style.display = "block";
+        var html = "";
+        for (var i = 0; i < topBidders.length; i++) {
+          var b = topBidders[i];
+          html += '<div class="bidder-row"><span class="rank">#' + (i+1) + '</span><span class="name">' + escapeHtml(b.name) + '</span><span class="amount">🪙 ' + formatNumber(b.totalAmount) + '</span></div>';
+        }
+        $("topBiddersList").innerHTML = html;
+      } else {
+        $("topBiddersSection").style.display = "none";
+      }
+    }
+
+    function escapeHtml(t) {
+      return String(t||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
     }
 
     async function fetchState() {
       if (!backendUrl) return;
       try {
-        const res = await fetch(backendUrl + "/auction-state", { cache: "no-store" });
+        var res = await fetch(backendUrl + "/auction-state", { cache: "no-store" });
         if (!res.ok) return;
-        const data = await res.json();
-        if (data.auction) updateStatus(data.auction);
+        var data = await res.json();
+        if (data.auction) updateStatus(data);
       } catch (e) {}
     }
 
     function init() {
       if (!backendUrl) {
-        $("statusText").textContent = "Backend URL tidak ditemukan";
-        return;
+        $("errorBanner").style.display = "block";
+        $("errorBanner").textContent = "Backend URL tidak ditemukan. Buka dashboard utama dulu (yang sudah connect ke TikTok), lalu buka halaman ini lagi. Atau tambahkan ?backend=URL di address bar.";
       }
 
-      const overlayUrl = new URL("auction.html", window.location.href);
-      overlayUrl.searchParams.set("backend", backendUrl);
+      var overlayUrl = new URL("auction.html", window.location.href);
+      if (backendUrl) overlayUrl.searchParams.set("backend", backendUrl);
       $("overlayLink").href = overlayUrl.toString();
       $("overlayLink").textContent = overlayUrl.toString();
 
-      $("saveConfigBtn").addEventListener("click", () => {
+      $("saveConfigBtn").addEventListener("click", function() {
         apiPost("/auction/config", {
           title: $("auctionTitle").value,
           description: $("auctionDesc").value,
+          customText: $("customText").value,
           minBid: Number($("minBid").value) || 0,
-          timerSeconds: Number($("timerSeconds").value) || 60
+          timerSeconds: Number($("timerSeconds").value) || 60,
+          snipeThreshold: Number($("snipeThreshold").value) || 0,
+          snipeExtend: Number($("snipeExtend").value) || 0
         });
       });
 
-      $("startBtn").addEventListener("click", () => apiPost("/auction/start"));
-      $("pauseBtn").addEventListener("click", () => apiPost("/auction/pause"));
-      $("stopBtn").addEventListener("click", () => apiPost("/auction/stop"));
-      $("resetBtn").addEventListener("click", () => apiPost("/auction/reset"));
-      $("extendBtn").addEventListener("click", () => apiPost("/auction/extend", { seconds: 10 }));
-      $("testBidBtn").addEventListener("click", () => {
+      $("startBtn").addEventListener("click", function() { apiPost("/auction/start"); });
+      $("pauseBtn").addEventListener("click", function() { apiPost("/auction/pause"); });
+      $("stopBtn").addEventListener("click", function() { apiPost("/auction/stop"); });
+      $("resetBtn").addEventListener("click", function() { apiPost("/auction/reset"); });
+      $("extendBtn").addEventListener("click", function() { apiPost("/auction/extend", { seconds: 10 }); });
+
+      $("testBidBtn").addEventListener("click", function() {
         apiPost("/auction/bid", {
           bidder: $("testBidder").value || "TestUser",
           amount: Number($("testAmount").value) || 0

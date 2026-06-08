@@ -5,250 +5,280 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Overlay</title>
   <style>
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes pulseGlow { 0%,100% { box-shadow: 0 0 20px rgba(255,107,53,0.2); } 50% { box-shadow: 0 0 40px rgba(255,107,53,0.5); } }
-    @keyframes slideUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes timerWarn { 0%,100% { color: #ff6b35; } 50% { color: #ff2222; } }
-    @keyframes shimmer { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
-    @keyframes idlePulse { 0%,100% { opacity: 0.6; transform: scale(1); } 50% { opacity: 1; transform: scale(1.02); } }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes pulseGlow { 0%,100% { box-shadow:0 0 15px rgba(255,107,53,0.2); } 50% { box-shadow:0 0 35px rgba(255,107,53,0.5); } }
+    @keyframes slideUp { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes timerWarn { 0%,100% { color:#ff6b35; } 50% { color:#ff2222; } }
+    @keyframes shimmer { 0% { background-position:-200% center; } 100% { background-position:200% center; } }
+    @keyframes idlePulse { 0%,100% { opacity:0.7; } 50% { opacity:1; } }
+    @keyframes coinBounce { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-6px); } }
 
     :root {
-      color-scheme: dark;
-      --bg: rgba(0,0,0,0);
-      --card: rgba(10,16,26,0.95);
-      --text: #ffffff;
-      --muted: rgba(255,255,255,0.55);
-      --accent: #ff6b35;
-      --accent-2: #3b82f6;
-      --gold: #ffd700;
+      color-scheme:dark;
+      --bg:rgba(0,0,0,0);
+      --card:rgba(8,14,24,0.95);
+      --text:#ffffff;
+      --muted:rgba(255,255,255,0.55);
+      --accent:#ff6b35;
+      --accent-2:#3b82f6;
+      --gold:#ffd700;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * { box-sizing:border-box; margin:0; padding:0; }
     body {
-      min-height: 100vh;
-      background: var(--bg);
-      font-family: "Segoe UI", system-ui, sans-serif;
-      color: var(--text);
-      display: grid;
-      place-items: center;
-      overflow: hidden;
+      min-height:100vh;
+      background:var(--bg);
+      font-family:"Segoe UI",system-ui,sans-serif;
+      color:var(--text);
+      display:grid;
+      place-items:center;
+      overflow:hidden;
     }
 
     .overlay-card {
-      width: min(420px, 88vw);
-      padding: 24px 28px;
-      border-radius: 24px;
-      background: var(--card);
-      border: 1px solid rgba(255,255,255,0.08);
-      box-shadow: 0 30px 80px rgba(0,0,0,0.6);
-      text-align: center;
-      animation: fadeIn 0.4s ease;
+      width:min(400px,88vw);
+      padding:22px 26px;
+      border-radius:22px;
+      background:var(--card);
+      border:1px solid rgba(255,255,255,0.08);
+      box-shadow:0 25px 70px rgba(0,0,0,0.6);
+      text-align:center;
+      animation:fadeIn 0.4s ease;
     }
 
     .timer-display {
-      font-size: 3.2rem;
-      font-weight: 900;
-      font-variant-numeric: tabular-nums;
-      color: var(--text);
-      margin-bottom: 8px;
-      letter-spacing: 2px;
+      font-size:3rem;
+      font-weight:900;
+      font-variant-numeric:tabular-nums;
+      color:var(--text);
+      margin-bottom:6px;
+      letter-spacing:2px;
     }
-    .timer-display.warning { animation: timerWarn 0.8s infinite; color: #ff4444; }
-    .timer-display.paused { color: #9ca3af; }
-    .timer-display.ended { color: #6b7280; }
+    .timer-display.warning { animation:timerWarn 0.8s infinite; color:#ff4444; }
+    .timer-display.paused { color:#fbbf24; }
+    .timer-display.ended { color:#6b7280; }
 
     .status-tag {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 12px;
-      border-radius: 999px;
-      font-size: 0.75rem;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-      margin-bottom: 16px;
+      display:inline-flex;
+      align-items:center;
+      gap:5px;
+      padding:3px 10px;
+      border-radius:999px;
+      font-size:0.72rem;
+      font-weight:700;
+      letter-spacing:0.5px;
+      margin-bottom:12px;
     }
-    .status-tag.live { background: rgba(239,68,68,0.2); color: #f87171; }
-    .status-tag.paused { background: rgba(255,193,7,0.15); color: #fbbf24; }
-    .status-tag.ended { background: rgba(107,114,128,0.15); color: #9ca3af; }
-    .status-tag.idle { background: rgba(59,130,246,0.12); color: #93c5fd; }
-
-    .coin-display {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      margin-bottom: 6px;
-    }
-    .coin-icon {
-      font-size: 1.8rem;
-      filter: drop-shadow(0 0 10px rgba(255,215,0,0.4));
-    }
-    .coin-amount {
-      font-size: 2.6rem;
-      font-weight: 900;
-      color: var(--gold);
-      text-shadow: 0 0 25px rgba(255,215,0,0.3);
-    }
-    .coin-label {
-      font-size: 0.85rem;
-      color: var(--muted);
-      margin-bottom: 18px;
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-    }
-
-    .participants {
-      font-size: 1.1rem;
-      color: var(--muted);
-    }
-    .participants strong {
-      color: var(--text);
-      font-weight: 800;
-    }
-
-    .winner-banner {
-      margin-top: 18px;
-      padding: 14px;
-      border-radius: 14px;
-      background: rgba(255,107,53,0.1);
-      border: 1px solid rgba(255,107,53,0.2);
-    }
-    .winner-banner .winner-label {
-      font-size: 0.75rem;
-      color: var(--accent);
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      margin-bottom: 4px;
-    }
-    .winner-banner .winner-name {
-      font-size: 1.3rem;
-      font-weight: 800;
-      color: var(--gold);
-    }
-    .winner-banner .winner-amount {
-      font-size: 0.9rem;
-      color: var(--muted);
-      margin-top: 2px;
-    }
+    .status-tag.live { background:rgba(239,68,68,0.2); color:#f87171; }
+    .status-tag.paused { background:rgba(255,193,7,0.15); color:#fbbf24; }
+    .status-tag.ended { background:rgba(107,114,128,0.15); color:#9ca3af; }
 
     .title-display {
-      font-size: 1.2rem;
-      font-weight: 700;
-      color: var(--text);
-      margin-bottom: 16px;
+      font-size:1.1rem;
+      font-weight:700;
+      color:var(--text);
+      margin-bottom:14px;
+    }
+    .custom-text {
+      font-size:0.85rem;
+      color:var(--muted);
+      margin-bottom:14px;
+      font-style:italic;
     }
 
-    /* Idle state */
+    .coin-section {
+      margin-bottom:14px;
+      animation:slideUp 0.3s ease 0.1s both;
+    }
+    .coin-row {
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+    }
+    .coin-icon {
+      font-size:1.5rem;
+      filter:drop-shadow(0 0 8px rgba(255,215,0,0.4));
+      animation:coinBounce 2s ease-in-out infinite;
+    }
+    .coin-amount {
+      font-size:2.4rem;
+      font-weight:900;
+      color:var(--gold);
+      text-shadow:0 0 20px rgba(255,215,0,0.3);
+    }
+    .coin-label {
+      font-size:0.75rem;
+      color:var(--muted);
+      text-transform:uppercase;
+      letter-spacing:1.5px;
+      margin-top:2px;
+    }
+
+    .top-bidders {
+      margin-bottom:14px;
+      animation:slideUp 0.3s ease 0.2s both;
+    }
+    .top-title {
+      font-size:0.7rem;
+      color:var(--muted);
+      text-transform:uppercase;
+      letter-spacing:1.5px;
+      margin-bottom:6px;
+    }
+    .top-row {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:5px 10px;
+      border-radius:8px;
+      background:rgba(255,255,255,0.03);
+      margin-bottom:3px;
+      font-size:0.82rem;
+    }
+    .top-row .rank {
+      font-weight:800;
+      min-width:22px;
+      color:var(--accent);
+    }
+    .top-row .rank.gold { color:var(--gold); }
+    .top-row .rank.silver { color:#c0c0c0; }
+    .top-row .rank.bronze { color:#cd7f32; }
+    .top-row .name { flex:1; text-align:left; font-weight:600; }
+    .top-row .amount { color:var(--gold); font-weight:700; display:flex; align-items:center; gap:4px; }
+    .top-row .amount .sm-coin { font-size:0.8em; }
+
+    .participants {
+      font-size:0.85rem;
+      color:var(--muted);
+      animation:slideUp 0.3s ease 0.3s both;
+    }
+    .participants strong { color:var(--text); }
+
+    .winner-banner {
+      margin-top:14px;
+      padding:14px;
+      border-radius:14px;
+      background:rgba(255,107,53,0.1);
+      border:1px solid rgba(255,107,53,0.2);
+      animation:slideUp 0.3s ease 0.4s both;
+    }
+    .winner-label { font-size:0.7rem; color:var(--accent); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:4px; }
+    .winner-name { font-size:1.3rem; font-weight:800; color:var(--gold); }
+    .winner-amount { font-size:0.85rem; color:var(--muted); margin-top:2px; display:flex; align-items:center; justify-content:center; gap:4px; }
+
+    .snipe-info {
+      margin-top:10px;
+      font-size:0.72rem;
+      color:rgba(255,107,53,0.7);
+    }
+
+    /* Idle */
     .idle-overlay {
-      width: min(380px, 85vw);
-      padding: 28px 24px;
-      border-radius: 24px;
-      background: var(--card);
-      border: 1px solid rgba(255,255,255,0.06);
-      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-      text-align: center;
-      animation: idlePulse 4s ease-in-out infinite;
+      width:min(360px,85vw);
+      padding:24px 20px;
+      border-radius:22px;
+      background:var(--card);
+      border:1px solid rgba(255,255,255,0.06);
+      box-shadow:0 20px 50px rgba(0,0,0,0.5);
+      text-align:center;
+      animation:idlePulse 4s ease-in-out infinite;
     }
     .idle-timer {
-      font-size: 2.8rem;
-      font-weight: 900;
-      font-variant-numeric: tabular-nums;
-      color: var(--text);
-      margin-bottom: 10px;
-      letter-spacing: 3px;
-      opacity: 0.9;
+      font-size:2.6rem;
+      font-weight:900;
+      font-variant-numeric:tabular-nums;
+      color:var(--text);
+      margin-bottom:8px;
+      letter-spacing:3px;
+      opacity:0.85;
     }
-    .idle-text {
-      font-size: 0.9rem;
-      color: var(--muted);
-      letter-spacing: 0.5px;
+    .idle-stats {
+      font-size:0.85rem;
+      color:var(--muted);
     }
-    .idle-text .coin-icon { font-size: 0.8em; }
+    .idle-stats .sm-coin { font-size:0.85em; }
   </style>
 </head>
 <body>
   <div id="auctionRoot">
     <div class="idle-overlay">
       <div class="idle-timer">00:00</div>
-      <div class="idle-text"><span class="coin-icon">🪙</span> 0 COINS — 0 Participants</div>
+      <div class="idle-stats"><span class="sm-coin">🪙</span> 0 COINS — 0 Participants</div>
     </div>
   </div>
   <script>
-    const params = new URLSearchParams(window.location.search);
-    const backendUrl = (params.get("backend") || "").replace(/\/$/, "");
-    const root = document.getElementById("auctionRoot");
+    var params = new URLSearchParams(window.location.search);
+    var backendUrl = (params.get("backend") || "").replace(/\/$/, "");
+    var root = document.getElementById("auctionRoot");
 
-    function formatTime(seconds) {
-      var m = Math.floor(seconds / 60);
-      var s = seconds % 60;
-      return (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+    function formatTime(s) {
+      var m = Math.floor(s / 60);
+      var sec = s % 60;
+      return (m < 10 ? "0" : "") + m + ":" + (sec < 10 ? "0" : "") + sec;
     }
+    function formatNumber(n) { return Number(n || 0).toLocaleString("id-ID"); }
+    function esc(t) { return String(t||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 
-    function formatNumber(n) {
-      return Number(n || 0).toLocaleString("id-ID");
-    }
-
-    function escapeHtml(text) {
-      return String(text || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-    }
-
-    function renderAuction(state) {
+    function renderAuction(state, topBidders) {
       if (!state || (!state.isActive && !state.startedAt)) {
-        root.innerHTML = '<div class="idle-overlay"><div class="idle-timer">00:00</div><div class="idle-text"><span class="coin-icon">🪙</span> 0 COINS — 0 Participants</div></div>';
+        root.innerHTML = '<div class="idle-overlay"><div class="idle-timer">00:00</div><div class="idle-stats"><span class="sm-coin">🪙</span> 0 COINS — 0 Participants</div></div>';
         return;
       }
 
       var isActive = state.isActive;
       var isPaused = state.isPaused;
       var timer = state.timerRemaining || 0;
-      var participants = (state.bidHistory || []).length;
-      var uniqueParticipants = {};
-      (state.bidHistory || []).forEach(function(b) { uniqueParticipants[b.bidder] = true; });
-      var participantCount = Object.keys(uniqueParticipants).length;
+      var top = topBidders || [];
 
-      var timerClass = "";
-      var statusClass = "";
-      var statusText = "";
+      var uniqueP = {};
+      (state.bidHistory || []).forEach(function(b) { uniqueP[b.bidder] = true; });
+      var pCount = Object.keys(uniqueP).length;
 
-      if (isActive && isPaused) {
-        timerClass = "paused";
-        statusClass = "paused";
-        statusText = "JEDA";
-      } else if (isActive && timer <= 10) {
-        timerClass = "warning";
-        statusClass = "live";
-        statusText = "🔴 LIVE";
-      } else if (isActive) {
-        statusClass = "live";
-        statusText = "🔴 LIVE";
-      } else {
-        timerClass = "ended";
-        statusClass = "ended";
-        statusText = "SELESAI";
+      var timerClass = "", statusClass = "", statusText = "";
+      if (isActive && isPaused) { timerClass="paused"; statusClass="paused"; statusText="JEDA"; }
+      else if (isActive && timer <= 10) { timerClass="warning"; statusClass="live"; statusText="🔴 LIVE"; }
+      else if (isActive) { statusClass="live"; statusText="🔴 LIVE"; }
+      else { timerClass="ended"; statusClass="ended"; statusText="SELESAI"; }
+
+      var h = '<div class="overlay-card">';
+      h += '<div class="status-tag ' + statusClass + '">' + statusText + '</div>';
+      h += '<div class="timer-display ' + timerClass + '">' + formatTime(timer) + '</div>';
+
+      if (state.title) h += '<div class="title-display">' + esc(state.title) + '</div>';
+      if (state.customText) h += '<div class="custom-text">' + esc(state.customText) + '</div>';
+
+      h += '<div class="coin-section">';
+      h += '<div class="coin-row"><span class="coin-icon">🪙</span><span class="coin-amount">' + formatNumber(state.currentBid) + '</span></div>';
+      h += '<div class="coin-label">COINS</div>';
+      h += '</div>';
+
+      if (top.length > 0) {
+        h += '<div class="top-bidders">';
+        h += '<div class="top-title">Top ' + top.length + '</div>';
+        for (var i = 0; i < top.length; i++) {
+          var b = top[i];
+          var rankClass = i === 0 ? "gold" : (i === 1 ? "silver" : "bronze");
+          h += '<div class="top-row"><span class="rank ' + rankClass + '">#' + (i+1) + '</span><span class="name">' + esc(b.name) + '</span><span class="amount"><span class="sm-coin">🪙</span> ' + formatNumber(b.totalAmount) + '</span></div>';
+        }
+        h += '</div>';
       }
 
-      var html = '<div class="overlay-card">';
-      html += '<div class="status-tag ' + statusClass + '">' + statusText + '</div>';
-      html += '<div class="timer-display ' + timerClass + '">' + formatTime(timer) + '</div>';
-
-      if (state.title) {
-        html += '<div class="title-display">' + escapeHtml(state.title) + '</div>';
-      }
-
-      html += '<div class="coin-display"><span class="coin-icon">🪙</span><span class="coin-amount">' + formatNumber(state.currentBid) + '</span></div>';
-      html += '<div class="coin-label">COINS</div>';
-      html += '<div class="participants"><strong>' + participantCount + '</strong> Participants</div>';
+      h += '<div class="participants"><strong>' + pCount + '</strong> Participants</div>';
 
       if (!isActive && state.startedAt && state.currentBidder) {
-        html += '<div class="winner-banner">';
-        html += '<div class="winner-label">Pemenang</div>';
-        html += '<div class="winner-name">' + escapeHtml(state.currentBidder) + '</div>';
-        html += '<div class="winner-amount">🪙 ' + formatNumber(state.currentBid) + ' COINS</div>';
-        html += '</div>';
+        h += '<div class="winner-banner">';
+        h += '<div class="winner-label">Pemenang</div>';
+        h += '<div class="winner-name">' + esc(state.currentBidder) + '</div>';
+        h += '<div class="winner-amount"><span class="sm-coin">🪙</span> ' + formatNumber(state.currentBid) + ' COINS</div>';
+        h += '</div>';
       }
 
-      html += '</div>';
-      root.innerHTML = html;
+      if (state.snipeCount > 0) {
+        h += '<div class="snipe-info">⏱ ' + state.snipeCount + 'x snipe</div>';
+      }
+
+      h += '</div>';
+      root.innerHTML = h;
     }
 
     async function fetchState() {
@@ -257,7 +287,7 @@
         var res = await fetch(backendUrl + "/auction-state", { cache: "no-store" });
         if (!res.ok) return;
         var data = await res.json();
-        if (data.auction) renderAuction(data.auction);
+        if (data.auction) renderAuction(data.auction, data.topBidders);
       } catch (e) {}
     }
 
@@ -265,7 +295,7 @@
       fetchState();
       setInterval(fetchState, 1000);
     } else {
-      root.innerHTML = '<div class="idle-overlay"><div class="idle-timer">00:00</div><div class="idle-text" style="color:#ff6b35">Tambahkan ?backend=URL di address bar</div></div>';
+      root.innerHTML = '<div class="idle-overlay"><div class="idle-timer">00:00</div><div class="idle-stats" style="color:#ff6b35">Tambahkan ?backend=URL</div></div>';
     }
   </script>
 </body>
