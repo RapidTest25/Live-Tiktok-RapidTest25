@@ -226,16 +226,13 @@ app.post('/overlay-state', express.json({ limit: '64kb' }), (req, res) => {
 // ===== Auction System =====
 let auctionState = {
     title: '',
-    description: '',
-    customText: '',
-    minBid: 0,
     currentBid: 0,
     currentBidder: '',
     bidHistory: [],
     participants: {},
     timerSeconds: 60,
     timerRemaining: 0,
-    snipeThreshold: 10,
+    snipeThreshold: 30,
     snipeExtend: 10,
     isActive: false,
     isPaused: false,
@@ -273,17 +270,16 @@ function placeAuctionBid(bidder, amount) {
     if (!auctionState.isActive || auctionState.isPaused) {
         return { error: 'Auction not active' };
     }
-    if (!bidder || typeof amount !== 'number') {
-        return { error: 'Missing bidder or amount' };
-    }
-    if (amount <= auctionState.currentBid) {
-        return { error: `Bid must be higher than ${auctionState.currentBid}` };
+    if (!bidder) {
+        return { error: 'Missing bidder' };
     }
 
-    auctionState.currentBid = amount;
+    var bidAmount = Math.max(1, Number(amount) || 1);
+
+    auctionState.currentBid += bidAmount;
     auctionState.currentBidder = bidder;
     auctionState.lastBidAt = Date.now();
-    auctionState.bidHistory.push({ bidder, amount, time: Date.now() });
+    auctionState.bidHistory.push({ bidder, amount: bidAmount, time: Date.now() });
     if (auctionState.bidHistory.length > 100) {
         auctionState.bidHistory = auctionState.bidHistory.slice(-100);
     }
@@ -291,7 +287,7 @@ function placeAuctionBid(bidder, amount) {
     if (!auctionState.participants[bidder]) {
         auctionState.participants[bidder] = { totalAmount: 0, bidCount: 0 };
     }
-    auctionState.participants[bidder].totalAmount += amount;
+    auctionState.participants[bidder].totalAmount += bidAmount;
     auctionState.participants[bidder].bidCount += 1;
 
     if (auctionState.timerRemaining <= auctionState.snipeThreshold && auctionState.snipeExtend > 0) {
@@ -312,11 +308,8 @@ app.get('/auction-state', (req, res) => {
 });
 
 app.post('/auction/config', express.json(), (req, res) => {
-    const { title, description, customText, minBid, timerSeconds, snipeThreshold, snipeExtend } = req.body || {};
+    const { title, timerSeconds, snipeThreshold, snipeExtend } = req.body || {};
     if (typeof title === 'string') auctionState.title = title;
-    if (typeof description === 'string') auctionState.description = description;
-    if (typeof customText === 'string') auctionState.customText = customText;
-    if (typeof minBid === 'number' && minBid >= 0) auctionState.minBid = minBid;
     if (typeof timerSeconds === 'number' && timerSeconds > 0) auctionState.timerSeconds = timerSeconds;
     if (typeof snipeThreshold === 'number' && snipeThreshold >= 0) auctionState.snipeThreshold = snipeThreshold;
     if (typeof snipeExtend === 'number' && snipeExtend >= 0) auctionState.snipeExtend = snipeExtend;
@@ -330,7 +323,7 @@ app.post('/auction/start', express.json(), (req, res) => {
     if (auctionState.isPaused) {
         auctionState.isPaused = false;
     } else {
-        auctionState.currentBid = auctionState.minBid;
+        auctionState.currentBid = 0;
         auctionState.currentBidder = '';
         auctionState.bidHistory = [];
         auctionState.participants = {};
@@ -364,10 +357,20 @@ app.post('/auction/stop', express.json(), (req, res) => {
 
 app.post('/auction/reset', express.json(), (req, res) => {
     auctionState = {
-        title: '', description: '', customText: '', minBid: 0,
-        currentBid: 0, currentBidder: '', bidHistory: [], participants: {},
-        timerSeconds: 60, timerRemaining: 0, snipeThreshold: 10, snipeExtend: 10,
-        isActive: false, isPaused: false, startedAt: null, lastBidAt: null, snipeCount: 0
+        title: '',
+        currentBid: 0,
+        currentBidder: '',
+        bidHistory: [],
+        participants: {},
+        timerSeconds: 60,
+        timerRemaining: 0,
+        snipeThreshold: 30,
+        snipeExtend: 10,
+        isActive: false,
+        isPaused: false,
+        startedAt: null,
+        lastBidAt: null,
+        snipeCount: 0
     };
     if (auctionTimerInterval) clearInterval(auctionTimerInterval);
     io.emit('auction-reset', auctionState);

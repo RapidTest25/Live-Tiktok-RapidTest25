@@ -13,7 +13,7 @@
       --accent: #ff6b35;
       --accent-2: #0f9d92;
       --border: rgba(27,27,27,0.08);
-      --radius: 14px;
+      --radius: 12px;
     }
     * { box-sizing: border-box; }
     body {
@@ -22,40 +22,39 @@
       font-family: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
       color: var(--ink);
       background: var(--bg);
-      padding: 16px;
-      max-width: 540px;
+      padding: 14px;
+      max-width: 500px;
       margin: 0 auto;
     }
-    h1 { font-size: 1.25rem; margin: 0 0 14px; display: flex; align-items: center; gap: 8px; }
+    h1 { font-size: 1.15rem; margin: 0 0 12px; }
     .card {
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 14px 16px;
-      margin-bottom: 10px;
+      padding: 12px 14px;
+      margin-bottom: 8px;
     }
-    .card h3 { margin: 0 0 10px; font-size: 0.95rem; }
-    .row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
-    .field { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 120px; }
-    .field label { font-size: 0.78rem; color: var(--muted); }
-    .field.small { max-width: 120px; flex: 0 0 120px; }
-    input, textarea, select {
-      padding: 7px 9px;
+    .card h3 { margin: 0 0 8px; font-size: 0.9rem; }
+    .row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; flex-wrap: wrap; }
+    .field { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 100px; }
+    .field label { font-size: 0.75rem; color: var(--muted); }
+    .field.small { max-width: 100px; flex: 0 0 100px; }
+    input {
+      padding: 6px 8px;
       border-radius: 8px;
       border: 1px solid var(--border);
       background: #fffaf3;
       font-family: inherit;
-      font-size: 0.85rem;
+      font-size: 0.82rem;
     }
-    textarea { resize: vertical; min-height: 36px; }
     button {
       border: none;
       border-radius: 999px;
-      padding: 8px 16px;
+      padding: 7px 14px;
       font-weight: 600;
-      font-size: 0.82rem;
+      font-size: 0.8rem;
       cursor: pointer;
-      transition: transform 0.15s, box-shadow 0.15s;
+      transition: transform 0.15s;
     }
     button:hover:not(:disabled) { transform: translateY(-1px); }
     button:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -66,48 +65,48 @@
     .btn-row { display: flex; gap: 6px; flex-wrap: wrap; }
 
     .status-bar {
-      padding: 12px 14px;
+      padding: 10px 12px;
       border-radius: 10px;
       background: rgba(255,107,53,0.06);
       border: 1px solid rgba(255,107,53,0.12);
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
     .status-bar.active { background: rgba(16,185,129,0.06); border-color: rgba(16,185,129,0.15); }
     .status-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 4px;
+      gap: 8px;
+      margin-bottom: 3px;
     }
     .status-row:last-child { margin-bottom: 0; }
     .status-bar .big {
-      font-size: 1.3rem;
+      font-size: 1.2rem;
       font-weight: 900;
       color: var(--accent);
       font-variant-numeric: tabular-nums;
-      min-width: 50px;
+      min-width: 45px;
       text-align: right;
     }
     .status-bar .gold { color: #b8860b; font-weight: 700; }
 
     .top-bidders {
-      margin-top: 8px;
-      padding-top: 8px;
+      margin-top: 6px;
+      padding-top: 6px;
       border-top: 1px dashed var(--border);
     }
-    .top-bidders h4 { margin: 0 0 6px; font-size: 0.78rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+    .top-bidders h4 { margin: 0 0 4px; font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
     .bidder-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 4px 8px;
+      padding: 3px 7px;
       border-radius: 6px;
       background: rgba(255,215,0,0.05);
-      margin-bottom: 3px;
-      font-size: 0.82rem;
+      margin-bottom: 2px;
+      font-size: 0.78rem;
     }
-    .bidder-row .rank { font-weight: 800; color: var(--accent); min-width: 24px; }
+    .bidder-row .rank { font-weight: 800; color: var(--accent); min-width: 20px; }
     .bidder-row .name { flex: 1; font-weight: 600; }
     .bidder-row .amount { color: #b8860b; font-weight: 700; }
 
@@ -118,21 +117,21 @@
       background: #fffaf3;
       border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 6px 8px;
-      font-size: 0.78rem;
+      padding: 5px 8px;
+      font-size: 0.75rem;
       word-break: break-all;
     }
     .link-box a { color: var(--accent-2); font-weight: 600; text-decoration: none; }
 
     .toast {
       position: fixed;
-      bottom: 16px;
-      right: 16px;
-      padding: 8px 14px;
+      bottom: 14px;
+      right: 14px;
+      padding: 7px 12px;
       border-radius: 8px;
       background: #2f2f2f;
       color: #fff;
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       z-index: 999;
       opacity: 0;
       transition: opacity 0.3s;
@@ -142,10 +141,10 @@
       background: rgba(239,68,68,0.08);
       border: 1px solid rgba(239,68,68,0.2);
       color: #dc2626;
-      padding: 10px 12px;
+      padding: 8px 10px;
       border-radius: 8px;
-      font-size: 0.82rem;
-      margin-bottom: 10px;
+      font-size: 0.78rem;
+      margin-bottom: 8px;
     }
   </style>
 </head>
@@ -178,29 +177,13 @@
       </div>
     </div>
     <div class="row">
-      <div class="field">
-        <label>Deskripsi</label>
-        <textarea id="auctionDesc" placeholder="Deskripsi..."></textarea>
-      </div>
-    </div>
-    <div class="row">
-      <div class="field">
-        <label>Text Custom (tampil di OBS)</label>
-        <input id="customText" type="text" placeholder="Text tambahan...">
-      </div>
-    </div>
-    <div class="row">
-      <div class="field small">
-        <label>Min Bid</label>
-        <input id="minBid" type="number" min="0" value="100">
-      </div>
       <div class="field small">
         <label>Timer (detik)</label>
         <input id="timerSeconds" type="number" min="10" value="60">
       </div>
       <div class="field small">
         <label>Snipe (detik)</label>
-        <input id="snipeThreshold" type="number" min="0" value="10" title="Jika bid masuk saat timer di bawah ini, waktu otomatis bertambah">
+        <input id="snipeThreshold" type="number" min="0" value="30" title="Jika gift masuk saat timer di bawah ini, waktu otomatis bertambah">
       </div>
       <div class="field small">
         <label>+Waktu</label>
@@ -224,17 +207,17 @@
   </div>
 
   <div class="card">
-    <h3>Test Bid</h3>
+    <h3>Test</h3>
     <div class="row">
       <div class="field">
-        <label>Bidder</label>
+        <label>Nama</label>
         <input id="testBidder" type="text" placeholder="Nama" value="TestUser">
       </div>
       <div class="field small">
-        <label>Jumlah</label>
-        <input id="testAmount" type="number" min="0" value="150">
+        <label>Coins</label>
+        <input id="testAmount" type="number" min="0" value="50">
       </div>
-      <button class="primary" id="testBidBtn" style="align-self:flex-end">Bid</button>
+      <button class="primary" id="testBidBtn" style="align-self:flex-end">Kirim</button>
     </div>
   </div>
 
@@ -248,8 +231,8 @@
   <div class="toast" id="toast"></div>
 
   <script>
-    const STORAGE_KEY = "tiktok_live_tool_state_v1";
-    const params = new URLSearchParams(window.location.search);
+    var STORAGE_KEY = "tiktok_live_tool_state_v1";
+    var params = new URLSearchParams(window.location.search);
 
     function getBackendUrl() {
       var fromParams = params.get("backend");
@@ -281,14 +264,13 @@
       return (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
     }
 
-    function formatNumber(n) {
-      return Number(n || 0).toLocaleString("id-ID");
-    }
+    function formatNumber(n) { return Number(n || 0).toLocaleString("id-ID"); }
+    function esc(t) { return String(t||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 
     async function apiPost(path, body) {
       if (!backendUrl) {
         $("errorBanner").style.display = "block";
-        $("errorBanner").textContent = "Backend URL tidak ditemukan. Buka dashboard utama dulu, atau tambahkan ?backend=URL di address bar.";
+        $("errorBanner").textContent = "Backend URL tidak ditemukan. Buka dashboard utama dulu.";
         return null;
       }
       $("errorBanner").style.display = "none";
@@ -328,16 +310,12 @@
         var html = "";
         for (var i = 0; i < topBidders.length; i++) {
           var b = topBidders[i];
-          html += '<div class="bidder-row"><span class="rank">#' + (i+1) + '</span><span class="name">' + escapeHtml(b.name) + '</span><span class="amount">🪙 ' + formatNumber(b.totalAmount) + '</span></div>';
+          html += '<div class="bidder-row"><span class="rank">#' + (i+1) + '</span><span class="name">' + esc(b.name) + '</span><span class="amount">🪙 ' + formatNumber(b.totalAmount) + '</span></div>';
         }
         $("topBiddersList").innerHTML = html;
       } else {
         $("topBiddersSection").style.display = "none";
       }
-    }
-
-    function escapeHtml(t) {
-      return String(t||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
     }
 
     async function fetchState() {
@@ -353,7 +331,7 @@
     function init() {
       if (!backendUrl) {
         $("errorBanner").style.display = "block";
-        $("errorBanner").textContent = "Backend URL tidak ditemukan. Buka dashboard utama dulu (yang sudah connect ke TikTok), lalu buka halaman ini lagi. Atau tambahkan ?backend=URL di address bar.";
+        $("errorBanner").textContent = "Backend URL tidak ditemukan. Buka dashboard utama dulu (yang sudah connect ke TikTok), lalu buka halaman ini lagi.";
       }
 
       var overlayUrl = new URL("auction.html", window.location.href);
@@ -364,9 +342,6 @@
       $("saveConfigBtn").addEventListener("click", function() {
         apiPost("/auction/config", {
           title: $("auctionTitle").value,
-          description: $("auctionDesc").value,
-          customText: $("customText").value,
-          minBid: Number($("minBid").value) || 0,
           timerSeconds: Number($("timerSeconds").value) || 60,
           snipeThreshold: Number($("snipeThreshold").value) || 0,
           snipeExtend: Number($("snipeExtend").value) || 0
