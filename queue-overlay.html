@@ -136,6 +136,8 @@
     var backendUrl = (params.get("backend") || "").replace(/\/$/, "");
     var listEl = document.getElementById("list");
     var countEl = document.getElementById("count");
+    var scrollTimer = null;
+    var lastQueueSignature = "";
 
     function getStatusClass(s) {
       if (s==="inProgress") return "inProgress";
@@ -153,25 +155,33 @@
       return getStatusLabel(e.status || "pending");
     }
 
-    function render(queue) {
-      if (!queue || !queue.length) {
-        listEl.innerHTML = '<div class="empty">Belum ada antrean</div>';
-        countEl.textContent = "0";
+    function stopAutoScroll() {
+      if (scrollTimer) {
+        clearInterval(scrollTimer);
+        scrollTimer = null;
+      }
+    }
+
+    function startAutoScroll(loopMode) {
+      stopAutoScroll();
+      if (!loopMode) {
+        listEl.scrollTop = 0;
         return;
       }
-      var active = queue.filter(function(e) { return e.status !== "done"; });
-      active.sort(function(a,b) { return (a.time||0) - (b.time||0); });
-      countEl.textContent = active.length;
 
-      if (!active.length) {
-        listEl.innerHTML = '<div class="empty">Semua selesai</div>';
-        return;
-      }
+      listEl.scrollTop = 0;
+      scrollTimer = setInterval(function() {
+        listEl.scrollTop += 1;
+        if (listEl.scrollTop >= listEl.scrollHeight / 2) {
+          listEl.scrollTop = 0;
+        }
+      }, 45);
+    }
 
+    function buildItemsHtml(items) {
       var h = "";
-      var max = Math.min(active.length, 20);
-      for (var i = 0; i < max; i++) {
-        var e = active[i];
+      for (var i = 0; i < items.length; i++) {
+        var e = items[i];
         var sc = getStatusClass(e.status || "pending");
         var badge = getBadge(e);
         var gift = "";
@@ -187,8 +197,42 @@
         if (gift) h += '<span class="gift">' + esc(gift) + '</span>';
         h += '</div>';
       }
-      listEl.innerHTML = h;
-      listEl.scrollTop = listEl.scrollHeight;
+      return h;
+    }
+
+    function render(queue) {
+      if (!queue || !queue.length) {
+        stopAutoScroll();
+        listEl.innerHTML = '<div class="empty">Belum ada antrean</div>';
+        countEl.textContent = "0";
+        return;
+      }
+      var active = queue.filter(function(e) { return e.status !== "done"; });
+      active.sort(function(a,b) { return (a.time||0) - (b.time||0); });
+      countEl.textContent = active.length;
+
+      if (!active.length) {
+        stopAutoScroll();
+        listEl.innerHTML = '<div class="empty">Semua selesai</div>';
+        return;
+      }
+
+      var visibleItems = active.slice(0, 40);
+      var loopMode = visibleItems.length > 10;
+      var h = buildItemsHtml(visibleItems);
+      if (loopMode) {
+        h += buildItemsHtml(visibleItems);
+      }
+
+      var signature = JSON.stringify(visibleItems.map(function(e) {
+        return [e.id, e.status, e.action, e.giftName, e.giftQty, e.diamondCount];
+      }));
+
+      if (signature !== lastQueueSignature) {
+        lastQueueSignature = signature;
+        listEl.innerHTML = h;
+        startAutoScroll(loopMode);
+      }
     }
 
     async function fetchQueue() {
