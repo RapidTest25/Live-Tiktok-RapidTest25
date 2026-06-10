@@ -72,7 +72,7 @@ const DEFAULT_GIFT_RULES = [
   {
     id: "rule-blowkiss-krupuk-rda",
     matchType: "name",
-    matchValue: "blow a kiss",
+    matchValue: "divine fingers",
     mode: "direct",
     rewardAction: "Krupuk Pagi Pagi RDA",
     unitCount: 1,
@@ -103,7 +103,7 @@ const DEFAULT_GIFT_RULES = [
 const POPULAR_GIFTS = [
   { name: "Heart Me", id: "heartme", value: "heart me" },
   { name: "Rose", id: "rose", value: "rose" },
-  { name: "Blow a kiss", id: "blowakiss", value: "blow a kiss" },
+  { name: "Divine Fingers", id: "divinefingers", value: "divine fingers" },
   { name: "Finger Heart", id: "fingerheart", value: "finger heart" },
   { name: "Super Popular", id: "superpopular", value: "super popular" },
   { name: "Doughnut", id: "doughnut", value: "doughnut" },
