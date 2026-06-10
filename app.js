@@ -34,9 +34,9 @@ const DEFAULT_GIFT_RULES = [
     matchType: "name",
     matchValue: "rose",
     mode: "direct",
-    rewardAction: "sepeda/pot hotspot",
+    rewardAction: "Celestial Gold/Diamond",
     unitCount: 1,
-    action: "sepeda/pot hotspot",
+    action: "Celestial Gold/Diamond",
     locked: true
   },
   {
@@ -44,19 +44,39 @@ const DEFAULT_GIFT_RULES = [
     matchType: "name",
     matchValue: "heart me",
     mode: "direct",
-    rewardAction: "Celestial Mutasi 2",
+    rewardAction: "Celestial Gold/DM 2",
     unitCount: 1,
-    action: "Celestial Mutasi 2",
+    action: "Celestial Gold/DM 2",
     locked: true
   },
   {
-    id: "rule-gg-krupuk-mutasi",
+    id: "rule-gg-celes-random",
     matchType: "name",
     matchValue: "gg",
     mode: "direct",
-    rewardAction: "Krupuk Pagi Pagi Mutasi",
+    rewardAction: "Celes Random Mutasi",
+    unitCount: 1,
+    action: "Celes Random Mutasi",
+    locked: true
+  },
+  {
+    id: "rule-gg-krupuk-molten",
+    matchType: "name",
+    matchValue: "gg",
+    mode: "direct",
+    rewardAction: "Krupuk Pagi Pagi Molten",
     unitCount: 3,
-    action: "3x Krupuk Pagi Pagi Mutasi",
+    action: "3x Krupuk Pagi Pagi Molten",
+    locked: true
+  },
+  {
+    id: "rule-blowkiss-krupuk-rda",
+    matchType: "name",
+    matchValue: "blow a kiss",
+    mode: "direct",
+    rewardAction: "Krupuk Pagi Pagi RDA",
+    unitCount: 1,
+    action: "Krupuk Pagi Pagi RDA",
     locked: true
   },
   {
@@ -67,16 +87,6 @@ const DEFAULT_GIFT_RULES = [
     rewardAction: "Max in 1 BR Kamu",
     unitCount: 1,
     action: "Max in 1 BR Kamu",
-    locked: true
-  },
-  {
-    id: "rule-doughnut-gajah-bacon",
-    matchType: "name",
-    matchValue: "doughnut",
-    mode: "direct",
-    rewardAction: "Gajah Bacon LVL MAX",
-    unitCount: 2,
-    action: "2x Gajah Bacon LVL MAX",
     locked: true
   },
   {
@@ -93,6 +103,7 @@ const DEFAULT_GIFT_RULES = [
 const POPULAR_GIFTS = [
   { name: "Heart Me", id: "heartme", value: "heart me" },
   { name: "Rose", id: "rose", value: "rose" },
+  { name: "Blow a kiss", id: "blowakiss", value: "blow a kiss" },
   { name: "Finger Heart", id: "fingerheart", value: "finger heart" },
   { name: "Super Popular", id: "superpopular", value: "super popular" },
   { name: "Doughnut", id: "doughnut", value: "doughnut" },
@@ -485,7 +496,9 @@ function loadState() {
       "rule-rose-spin-mutasi",
       "rule-rose-kick-celestial",
       "rule-heartme-br-celestial",
-      "rule-doughnut-meowl-bacon"
+      "rule-doughnut-meowl-bacon",
+      "rule-gg-krupuk-mutasi",
+      "rule-doughnut-gajah-bacon"
     ];
     const hasOldDefault = state.giftRules.some((r) => OLD_DEFAULT_RULE_IDS.includes(r.id));
     if (hasOldDefault) {
@@ -501,9 +514,10 @@ function loadState() {
     const criticalRuleIds = [
       "rule-rose-hotspot",
       "rule-heartme-celestial-mutasi-2",
-      "rule-gg-krupuk-mutasi",
+      "rule-gg-celes-random",
+      "rule-gg-krupuk-molten",
+      "rule-blowkiss-krupuk-rda",
       "rule-fingerheart-max-br",
-      "rule-doughnut-gajah-bacon",
       "rule-default"
     ];
     const existingIds = new Set(state.giftRules.map((r) => r.id));
@@ -1212,7 +1226,7 @@ function processGiftRules(msg) {
     if (rewardQty <= 0) return;
     addJokiQueueEntry({
       action: rule.rewardAction || rule.action,
-      consolidateKey: stableKey,
+      consolidateKey: (options && options.consolidateKey) || rule.id || stableKey,
       user: getDisplayLabel(msg),
       username: null,
       tiktokId: msg.uniqueId || null,
@@ -1311,7 +1325,33 @@ function processGiftRules(msg) {
   const nameRules = state.giftRules.filter((r) => r.matchType === "name");
   const matchingNameRules = nameRules.filter((r) => checkRule(r));
 
+  if (giftNameMatchesRule(msg.giftName, "gg")) {
+    const ggMoltenRule = matchingNameRules.find((r) => r.id === "rule-gg-krupuk-molten");
+    const ggRandomRule = matchingNameRules.find((r) => r.id === "rule-gg-celes-random");
+    const moltenQty = ggMoltenRule ? Math.floor(repeatCount / 3) : 0;
+    const randomQty = ggRandomRule ? (repeatCount % 3) : 0;
+
+    if (moltenQty > 0) {
+      fireDirectRule(ggMoltenRule, moltenQty, {
+        giftQty: moltenQty * 3,
+        consolidateKey: ggMoltenRule.id
+      });
+    }
+    if (randomQty > 0) {
+      fireDirectRule(ggRandomRule, randomQty, {
+        giftQty: randomQty,
+        consolidateKey: ggRandomRule.id
+      });
+    }
+    if (moltenQty > 0 || randomQty > 0) {
+      return;
+    }
+  }
+
   for (const rule of matchingNameRules) {
+    if (rule.id === "rule-gg-celes-random" || rule.id === "rule-gg-krupuk-molten") {
+      continue;
+    }
     if (checkRule(rule)) {
       processRule(rule);
       return;
