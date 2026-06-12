@@ -301,6 +301,10 @@ button:hover:not(:disabled) {
   min-height: 0;
 }
 
+.hidden-legacy-panel {
+  display: none !important;
+}
+
 .spinner-panel {
   grid-column: 2 / span 2;
   grid-row: 1;
@@ -309,6 +313,25 @@ button:hover:not(:disabled) {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.gifter-panel-main {
+  grid-column: 2 / span 2;
+  grid-row: 1;
+}
+
+.gifter-panel-main .spinner-shell {
+  grid-template-columns: 1fr;
+}
+
+.gifter-panel-main .spinner-side {
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.gifter-panel-main .winner-list {
+  max-height: none;
 }
 
 .spinner-shell {

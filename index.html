@@ -94,7 +94,7 @@
         <div id="giftList" class="list gift-list"></div>
       </section>
 
-      <section class="card panel compact-panel session-panel">
+      <section class="card panel compact-panel session-panel hidden-legacy-panel" aria-hidden="true">
         <div class="panel-header">
           <div>
             <h2>Sesi Angka</h2>
@@ -118,15 +118,15 @@
         </div>
       </section>
 
-      <section class="card panel compact-panel spinner-panel">
+      <section class="card panel compact-panel spinner-panel gifter-panel-main">
         <div class="panel-header">
           <div>
-            <h2>Spinner</h2>
-            <p class="panel-sub">Spin memilih angka dari sesi chat terbaru.</p>
+            <h2>History Gifter</h2>
+            <p class="panel-sub">Riwayat gift terbaru dari viewer. Bisa dicari dan dipantau cepat.</p>
           </div>
         </div>
         <div class="spinner-shell">
-          <div class="spinner-stage">
+          <div class="spinner-stage hidden-legacy-panel" aria-hidden="true">
             <div class="spinner-wrap compact-spinner-wrap">
               <div class="wheel-frame compact-wheel-frame">
                 <canvas id="wheel" width="320" height="320"></canvas>
