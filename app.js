@@ -170,6 +170,7 @@ let diamondsCount = 0;
 let sessionUserMap = new Map();
 let sessionNumberMap = new Map();
 let recentGiftFeedKeys = new Map();
+let recentProcessedGiftKeys = new Map();
 let gifterHistory = [];
 let editingEntryId = null;
 let jokiSearchQuery = "";
@@ -1046,6 +1047,15 @@ function pruneRecentGiftFeedKeys() {
   });
 }
 
+function pruneRecentProcessedGiftKeys() {
+  const now = Date.now();
+  recentProcessedGiftKeys.forEach((time, key) => {
+    if (now - time > 8000) {
+      recentProcessedGiftKeys.delete(key);
+    }
+  });
+}
+
 function findGiftFeedStreakItem(streakId) {
   return Array.from(el.giftList.children).find((node) => node.dataset && node.dataset.streakId === streakId) || null;
 }
@@ -1313,8 +1323,13 @@ function processGiftRules(msg) {
   const userLabel = msg.uniqueId ? `@${msg.uniqueId}` : (msg.nickname || "viewer");
   const isStreak = msg.giftType === 1;
   const isPendingStreak = isStreak && !msg.repeatEnd;
+  const processedKey = getGiftFeedKey(msg);
 
   if (isPendingStreak) return;
+
+  pruneRecentProcessedGiftKeys();
+  if (recentProcessedGiftKeys.has(processedKey)) return;
+  recentProcessedGiftKeys.set(processedKey, Date.now());
 
   const stableKey = `${msg.giftName || "gift"}|${diamondCount}|${msg.uniqueId || "unknown"}`;
 
@@ -1485,7 +1500,11 @@ function addJokiQueueEntry(entry) {
       item.status === "pending"
     );
     if (existing) {
-      existing.qty = (Number(existing.qty) || 1) + addedQty;
+      if (entry.isCumulative) {
+        existing.qty = addedQty;
+      } else {
+        existing.qty = (Number(existing.qty) || 1) + addedQty;
+      }
       if (entry.isCumulative) {
         existing.giftQty = addedGiftQty;
         existing.diamondCount = addedCoinsTotal;
