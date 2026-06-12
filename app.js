@@ -1028,14 +1028,15 @@ function getGiftFeedStreakId(msg) {
   return `${userId}_${giftId}`;
 }
 
+function getGiftEventKey(msg) {
+  const parts = [msg && (msg.msgId || msg.eventId || msg.logId || msg.createTime || msg.timestamp)];
+  const primary = parts[0];
+  if (!primary) return "";
+  return String(primary);
+}
+
 function getGiftFeedKey(msg) {
-  return [
-    msg.userId || msg.uniqueId || "unknown",
-    msg.giftId || msg.giftName || "gift",
-    Number(msg.repeatCount || 1),
-    Number(msg.diamondCount || 0),
-    msg.repeatEnd ? "end" : "mid"
-  ].join("|");
+  return getGiftEventKey(msg);
 }
 
 function pruneRecentGiftFeedKeys() {
@@ -1061,11 +1062,26 @@ function findGiftFeedStreakItem(streakId) {
 }
 
 function upsertGifterHistory(msg, now, streakId) {
+  const pendingStreak = msg.giftType === 1 && !msg.repeatEnd;
+  const eventKey = getGiftEventKey(msg);
   const repeatCount = Math.max(1, Number(msg.repeatCount) || 1);
   const diamondCount = Number(msg.diamondCount || 0);
   const totalCoins = diamondCount * repeatCount;
-  const existingIndex = gifterHistory.findIndex((item) => item.streakId === streakId);
+  let historyKey = eventKey || `${streakId}:${now}:${repeatCount}:${diamondCount}`;
+  let existingIndex = -1;
+
+  if (pendingStreak) {
+    historyKey = `pending:${streakId}`;
+    existingIndex = gifterHistory.findIndex((item) => item.historyKey === historyKey);
+  } else {
+    existingIndex = gifterHistory.findIndex((item) => item.historyKey === `pending:${streakId}`);
+    if (existingIndex === -1 && eventKey) {
+      existingIndex = gifterHistory.findIndex((item) => item.historyKey === eventKey);
+    }
+  }
+
   const nextEntry = {
+    historyKey,
     streakId,
     user: getDisplayLabel(msg),
     tiktokId: msg.uniqueId || "",
@@ -1146,10 +1162,12 @@ function addGiftItem(msg) {
 
   pruneRecentGiftFeedKeys();
 
-  if (!pendingStreak && recentGiftFeedKeys.has(feedKey)) {
+  if (feedKey && !pendingStreak && recentGiftFeedKeys.has(feedKey)) {
     return;
   }
-  recentGiftFeedKeys.set(feedKey, now);
+  if (feedKey) {
+    recentGiftFeedKeys.set(feedKey, now);
+  }
   upsertGifterHistory(msg, now, streakId);
 
   const item = document.createElement("div");
@@ -1328,8 +1346,10 @@ function processGiftRules(msg) {
   if (isPendingStreak) return;
 
   pruneRecentProcessedGiftKeys();
-  if (recentProcessedGiftKeys.has(processedKey)) return;
-  recentProcessedGiftKeys.set(processedKey, Date.now());
+  if (processedKey && recentProcessedGiftKeys.has(processedKey)) return;
+  if (processedKey) {
+    recentProcessedGiftKeys.set(processedKey, Date.now());
+  }
 
   const stableKey = `${msg.giftName || "gift"}|${diamondCount}|${msg.uniqueId || "unknown"}`;
 
