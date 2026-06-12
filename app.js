@@ -30,53 +30,73 @@ const DEFAULT_SPIN_POOLS = [
 
 const DEFAULT_GIFT_RULES = [
   {
-    id: "rule-rose-hotspot",
-    matchType: "name",
-    matchValue: "rose",
+    id: "rule-coin-1-random-mutasi",
+    matchType: "diamond",
+    matchValue: 1,
     mode: "direct",
-    rewardAction: "Celestial Gold/Diamond",
+    rewardAction: "Celestial Random Mutasi",
     unitCount: 1,
-    action: "Celestial Gold/Diamond",
+    action: "Celestial Random Mutasi",
     locked: true
   },
   {
-    id: "rule-heartme-celestial-mutasi-2",
-    matchType: "name",
-    matchValue: "heart me",
-    mode: "direct",
-    rewardAction: "Celestial Gold/DM 2",
-    unitCount: 1,
-    action: "Celestial Gold/DM 2",
-    locked: true
-  },
-  {
-    id: "rule-gg-celes-random",
-    matchType: "name",
-    matchValue: "gg",
-    mode: "direct",
-    rewardAction: "Celes Random Mutasi",
-    unitCount: 1,
-    action: "Celes Random Mutasi",
-    locked: true
-  },
-  {
-    id: "rule-gg-krupuk-molten",
-    matchType: "name",
-    matchValue: "gg",
+    id: "rule-coin-3-molten",
+    matchType: "diamond",
+    matchValue: 3,
     mode: "direct",
     rewardAction: "Krupuk Pagi Pagi Molten",
-    unitCount: 3,
-    action: "3x Krupuk Pagi Pagi Molten",
+    unitCount: 1,
+    action: "Krupuk Pagi Pagi Molten",
     locked: true
   },
   {
-    id: "rule-blowkiss-krupuk-rda",
-    matchType: "name",
-    matchValue: "divine fingers",
+    id: "rule-coin-4-celestial-rda",
+    matchType: "diamond",
+    matchValue: 4,
+    mode: "direct",
+    rewardAction: "Celestial RDA",
+    unitCount: 1,
+    action: "Celestial RDA",
+    locked: true
+  },
+  {
+    id: "rule-coin-6-rda",
+    matchType: "diamond",
+    matchValue: 6,
     mode: "direct",
     rewardAction: "Krupuk Pagi Pagi RDA",
     unitCount: 1,
     action: "Krupuk Pagi Pagi RDA",
+    locked: true
+  },
+  {
+    id: "rule-coin-7-shadow",
+    matchType: "diamond",
+    matchValue: 7,
+    mode: "direct",
+    rewardAction: "Celestial Shadow",
+    unitCount: 1,
+    action: "Celestial Shadow",
+    locked: true
+  },
+  {
+    id: "rule-coin-12-electrical",
+    matchType: "diamond",
+    matchValue: 12,
+    mode: "direct",
+    rewardAction: "Celestial Electrical",
+    unitCount: 1,
+    action: "Celestial Electrical",
+    locked: true
+  },
+  {
+    id: "rule-heartme-molten-2",
+    matchType: "name",
+    matchValue: "heart me",
+    mode: "direct",
+    rewardAction: "Celestial Molten 2",
+    unitCount: 1,
+    action: "Celestial Molten 2",
     locked: true
   },
   {
@@ -498,7 +518,12 @@ function loadState() {
       "rule-heartme-br-celestial",
       "rule-doughnut-meowl-bacon",
       "rule-gg-krupuk-mutasi",
-      "rule-doughnut-gajah-bacon"
+      "rule-doughnut-gajah-bacon",
+      "rule-rose-hotspot",
+      "rule-heartme-celestial-mutasi-2",
+      "rule-gg-celes-random",
+      "rule-gg-krupuk-molten",
+      "rule-blowkiss-krupuk-rda"
     ];
     const hasOldDefault = state.giftRules.some((r) => OLD_DEFAULT_RULE_IDS.includes(r.id));
     if (hasOldDefault) {
@@ -512,11 +537,13 @@ function loadState() {
     }
 
     const criticalRuleIds = [
-      "rule-rose-hotspot",
-      "rule-heartme-celestial-mutasi-2",
-      "rule-gg-celes-random",
-      "rule-gg-krupuk-molten",
-      "rule-blowkiss-krupuk-rda",
+      "rule-coin-1-random-mutasi",
+      "rule-coin-3-molten",
+      "rule-coin-4-celestial-rda",
+      "rule-coin-6-rda",
+      "rule-coin-7-shadow",
+      "rule-coin-12-electrical",
+      "rule-heartme-molten-2",
       "rule-fingerheart-max-br",
       "rule-default"
     ];
@@ -1201,6 +1228,7 @@ function processGiftRules(msg) {
   const giftName = normalizeKey(msg.giftName);
   const diamondCount = Number(msg.diamondCount || 0);
   const repeatCount = Math.max(1, Number(msg.repeatCount) || 1);
+  const totalCoins = diamondCount * repeatCount;
   const userLabel = msg.uniqueId ? `@${msg.uniqueId}` : (msg.nickname || "viewer");
   const isStreak = msg.giftType === 1;
   const isPendingStreak = isStreak && !msg.repeatEnd;
@@ -1211,7 +1239,7 @@ function processGiftRules(msg) {
 
   const checkRule = (rule) => {
     if (rule.matchType === "diamond") {
-      return Number(rule.matchValue) === diamondCount;
+      return Number(rule.matchValue) === totalCoins;
     }
     if (rule.matchType === "name") {
       return giftNameMatchesRule(msg.giftName, rule.matchValue);
@@ -1325,33 +1353,7 @@ function processGiftRules(msg) {
   const nameRules = state.giftRules.filter((r) => r.matchType === "name");
   const matchingNameRules = nameRules.filter((r) => checkRule(r));
 
-  if (giftNameMatchesRule(msg.giftName, "gg")) {
-    const ggMoltenRule = matchingNameRules.find((r) => r.id === "rule-gg-krupuk-molten");
-    const ggRandomRule = matchingNameRules.find((r) => r.id === "rule-gg-celes-random");
-    const moltenQty = ggMoltenRule ? Math.floor(repeatCount / 3) : 0;
-    const randomQty = ggRandomRule ? (repeatCount % 3) : 0;
-
-    if (moltenQty > 0) {
-      fireDirectRule(ggMoltenRule, moltenQty, {
-        giftQty: moltenQty * 3,
-        consolidateKey: ggMoltenRule.id
-      });
-    }
-    if (randomQty > 0) {
-      fireDirectRule(ggRandomRule, randomQty, {
-        giftQty: randomQty,
-        consolidateKey: ggRandomRule.id
-      });
-    }
-    if (moltenQty > 0 || randomQty > 0) {
-      return;
-    }
-  }
-
   for (const rule of matchingNameRules) {
-    if (rule.id === "rule-gg-celes-random" || rule.id === "rule-gg-krupuk-molten") {
-      continue;
-    }
     if (checkRule(rule)) {
       processRule(rule);
       return;
@@ -1943,12 +1945,15 @@ function handleImportFile(file) {
 function inferRuleForImportedEntry(entry) {
   if (!entry || !entry.giftName || entry.giftName === "-") return null;
   const diamondCount = Number(entry.diamondCount) || 0;
+  const totalCoins = diamondCount > 0
+    ? Math.max(1, Number(entry.giftQty) || Number(entry.qty) || 1) * diamondCount
+    : 0;
   return state.giftRules.find((rule) => {
     if (rule.matchType === "name") {
       return giftNameMatchesRule(entry.giftName, rule.matchValue);
     }
     if (rule.matchType === "diamond") {
-      return Number(rule.matchValue) === diamondCount;
+      return Number(rule.matchValue) === totalCoins;
     }
     return false;
   }) || null;
