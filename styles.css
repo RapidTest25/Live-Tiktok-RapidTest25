@@ -275,7 +275,7 @@ button:hover:not(:disabled) {
 .grid {
   display: grid;
   gap: 10px;
-  grid-template-columns: minmax(460px, 1.45fr) minmax(240px, 0.75fr) minmax(300px, 0.95fr);
+  grid-template-columns: minmax(300px, 0.9fr) minmax(360px, 1.15fr) minmax(320px, 1fr);
   align-items: start;
   flex: 1;
   min-height: 0;
@@ -284,13 +284,13 @@ button:hover:not(:disabled) {
 }
 
 .queue-panel {
-  grid-column: 1;
+  grid-column: 2 / span 2;
   grid-row: 1 / span 2;
   min-height: 0;
 }
 
 .gifts-panel {
-  grid-column: 3;
+  grid-column: 1;
   grid-row: 2;
   min-height: 0;
 }
@@ -306,7 +306,7 @@ button:hover:not(:disabled) {
 }
 
 .spinner-panel {
-  grid-column: 2 / span 2;
+  grid-column: 1;
   grid-row: 1;
   min-height: 0;
   max-height: none;
@@ -316,7 +316,7 @@ button:hover:not(:disabled) {
 }
 
 .gifter-panel-main {
-  grid-column: 2 / span 2;
+  grid-column: 1;
   grid-row: 1;
 }
 
