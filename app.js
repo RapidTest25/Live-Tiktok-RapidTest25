@@ -170,9 +170,11 @@ let diamondsCount = 0;
 let sessionUserMap = new Map();
 let sessionNumberMap = new Map();
 let recentGiftFeedKeys = new Map();
+let gifterHistory = [];
 let editingEntryId = null;
 let jokiSearchQuery = "";
 let jokiStatusFilter = "all";
+let gifterSearchQuery = "";
 
 const el = {};
 
@@ -1048,6 +1050,84 @@ function findGiftFeedStreakItem(streakId) {
   return Array.from(el.giftList.children).find((node) => node.dataset && node.dataset.streakId === streakId) || null;
 }
 
+function upsertGifterHistory(msg, now, streakId) {
+  const repeatCount = Math.max(1, Number(msg.repeatCount) || 1);
+  const diamondCount = Number(msg.diamondCount || 0);
+  const totalCoins = diamondCount * repeatCount;
+  const existingIndex = gifterHistory.findIndex((item) => item.streakId === streakId);
+  const nextEntry = {
+    streakId,
+    user: getDisplayLabel(msg),
+    tiktokId: msg.uniqueId || "",
+    giftName: msg.giftName || "gift",
+    repeatCount,
+    diamondCount,
+    totalCoins,
+    time: now
+  };
+
+  if (existingIndex >= 0) {
+    gifterHistory[existingIndex] = nextEntry;
+  } else {
+    gifterHistory.unshift(nextEntry);
+    if (gifterHistory.length > 200) {
+      gifterHistory = gifterHistory.slice(0, 200);
+    }
+  }
+  renderGifterHistory();
+}
+
+function renderGifterHistory() {
+  if (!el.gifterList || !el.gifterCount) return;
+
+  el.gifterList.innerHTML = "";
+  const search = normalizeKey(gifterSearchQuery);
+  const items = gifterHistory.filter((entry) => {
+    if (!search) return true;
+    const haystack = [entry.user, entry.tiktokId, entry.giftName]
+      .map((value) => normalizeKey(value))
+      .join(" ");
+    return haystack.includes(search);
+  });
+
+  el.gifterCount.textContent = `${items.length} gifter`;
+
+  if (!items.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.textContent = gifterSearchQuery ? "Tidak ada gifter yang cocok." : "Belum ada gifter.";
+    el.gifterList.appendChild(empty);
+    return;
+  }
+
+  items.forEach((entry) => {
+    const row = document.createElement("div");
+    row.className = "list-item";
+
+    const content = document.createElement("div");
+    content.className = "item-content";
+
+    const title = document.createElement("div");
+    title.className = "item-title";
+    title.textContent = entry.user;
+
+    const text = document.createElement("div");
+    text.className = "item-text";
+    const qtyText = entry.repeatCount > 1 ? `x${entry.repeatCount}` : "x1";
+    text.textContent = `${entry.giftName} • ${qtyText} • ${entry.totalCoins}🪙`;
+
+    const meta = document.createElement("div");
+    meta.className = "item-meta";
+    meta.textContent = `${entry.tiktokId ? `@${entry.tiktokId} • ` : ""}${formatTime(entry.time)}`;
+
+    content.appendChild(title);
+    content.appendChild(text);
+    content.appendChild(meta);
+    row.appendChild(content);
+    el.gifterList.appendChild(row);
+  });
+}
+
 function addGiftItem(msg) {
   const pendingStreak = msg.giftType === 1 && !msg.repeatEnd;
   const streakId = getGiftFeedStreakId(msg);
@@ -1060,6 +1140,7 @@ function addGiftItem(msg) {
     return;
   }
   recentGiftFeedKeys.set(feedKey, now);
+  upsertGifterHistory(msg, now, streakId);
 
   const item = document.createElement("div");
   item.className = "list-item gift-item";
@@ -2429,6 +2510,10 @@ function startEditActionInline(entryId, targetEl) {
 
 
 function renderWinners() {
+  if (!el.winnerList) {
+    updateCounts();
+    return;
+  }
   el.winnerList.innerHTML = "";
 
   state.winners.forEach((winner) => {
@@ -2483,6 +2568,57 @@ function addWinner(entry) {
 
   saveState();
   renderWinners();
+}
+
+function renderGifterHistory() {
+  if (!el.gifterList || !el.gifterCount) return;
+
+  el.gifterList.innerHTML = "";
+  const search = normalizeKey(gifterSearchQuery);
+  const items = gifterHistory.filter((entry) => {
+    if (!search) return true;
+    const haystack = [entry.user, entry.tiktokId, entry.giftName]
+      .map((value) => normalizeKey(value))
+      .join(" ");
+    return haystack.includes(search);
+  });
+
+  el.gifterCount.textContent = `${items.length} gifter`;
+
+  if (!items.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.textContent = gifterSearchQuery ? "Tidak ada gifter yang cocok." : "Belum ada gifter.";
+    el.gifterList.appendChild(empty);
+    return;
+  }
+
+  items.forEach((entry) => {
+    const row = document.createElement("div");
+    row.className = "list-item";
+
+    const content = document.createElement("div");
+    content.className = "item-content";
+
+    const title = document.createElement("div");
+    title.className = "item-title";
+    title.textContent = entry.user;
+
+    const text = document.createElement("div");
+    text.className = "item-text";
+    const qtyText = entry.repeatCount > 1 ? `x${entry.repeatCount}` : "x1";
+    text.textContent = `${entry.giftName} • ${qtyText} • ${entry.totalCoins}🪙`;
+
+    const meta = document.createElement("div");
+    meta.className = "item-meta";
+    meta.textContent = `${entry.tiktokId ? `@${entry.tiktokId} • ` : ""}${formatTime(entry.time)}`;
+
+    content.appendChild(title);
+    content.appendChild(text);
+    content.appendChild(meta);
+    row.appendChild(content);
+    el.gifterList.appendChild(row);
+  });
 }
 
 function clearChat() {
@@ -2707,7 +2843,16 @@ function bindEvents() {
     normalizeNumberRange();
   });
 
-  el.clearWinnersBtn.addEventListener("click", clearWinners);
+  if (el.clearWinnersBtn) {
+    el.clearWinnersBtn.addEventListener("click", clearWinners);
+  }
+  if (el.clearGiftersBtn) {
+    el.clearGiftersBtn.addEventListener("click", () => {
+      gifterHistory = [];
+      renderGifterHistory();
+      showToast("History gifter dihapus", "success");
+    });
+  }
   el.clearJokiBtn.addEventListener("click", clearJokiQueue);
   el.exportJokiBtn.addEventListener("click", openExportModal);
   el.importJokiBtn.addEventListener("click", openImportModal);
@@ -2733,6 +2878,12 @@ function bindEvents() {
     jokiSearchQuery = event.target.value || "";
     renderJokiQueue();
   });
+  if (el.gifterSearchInput) {
+    el.gifterSearchInput.addEventListener("input", (event) => {
+      gifterSearchQuery = event.target.value || "";
+      renderGifterHistory();
+    });
+  }
   el.jokiStatusFilter.addEventListener("change", (event) => {
     jokiStatusFilter = event.target.value || "all";
     renderJokiQueue();
@@ -2746,7 +2897,12 @@ function bindEvents() {
     showToast(`Export berhasil: ${state.giftRules.length} rule`, "success");
   });
   el.resetRulesBtn.addEventListener("click", resetGiftRulesToDefault);
-  el.exportWinnersBtn.addEventListener("click", () => downloadJSON(state.winners, "winners.json"));
+  if (el.exportWinnersBtn) {
+    el.exportWinnersBtn.addEventListener("click", () => downloadJSON(state.winners, "winners.json"));
+  }
+  if (el.exportGiftersBtn) {
+    el.exportGiftersBtn.addEventListener("click", () => downloadJSON(gifterHistory, "gifter-history.json"));
+  }
   el.addRuleBtn.addEventListener("click", addGiftRuleFromForm);
   el.spinBtn.addEventListener("click", spinWheel);
   el.backendInput.addEventListener("input", updateOverlayLink);
@@ -2806,6 +2962,11 @@ function init() {
   el.winnerCount = $("winnerCount");
   el.winnerDisplay = $("winnerDisplay");
   el.clearWinnersBtn = $("clearWinnersBtn");
+  el.gifterList = $("gifterList");
+  el.gifterCount = $("gifterCount");
+  el.gifterSearchInput = $("gifterSearchInput");
+  el.clearGiftersBtn = $("clearGiftersBtn");
+  el.exportGiftersBtn = $("exportGiftersBtn");
   el.ruleType = $("ruleType");
   el.ruleDiamondValue = $("ruleDiamondValue");
   el.ruleGiftValue = $("ruleGiftValue");
@@ -2841,6 +3002,7 @@ function init() {
   bindEvents();
   renderSessionNumbers();
   renderWinners();
+  renderGifterHistory();
   renderJokiQueue();
   renderGiftRules();
   resizeWheel();

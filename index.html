@@ -145,15 +145,18 @@
 
           <aside class="spinner-side">
             <div class="spinner-history-header">
-              <strong>History Pemenang</strong>
+              <strong>History Gifter</strong>
               <div class="joki-panel-header-actions">
-                <button id="exportWinnersBtn" class="ghost small">Export JSON</button>
-                <button id="clearWinnersBtn" class="ghost small">Clear</button>
+                <button id="exportGiftersBtn" class="ghost small">Export JSON</button>
+                <button id="clearGiftersBtn" class="ghost small">Clear</button>
               </div>
             </div>
-            <div id="winnerList" class="list winner-list"></div>
+            <div class="queue-toolbar spinner-side-search">
+              <input id="gifterSearchInput" type="text" placeholder="Cari gifter / gift...">
+            </div>
+            <div id="gifterList" class="list winner-list"></div>
             <div class="panel-footer compact-footer spinner-side-footer">
-              <span id="winnerCount" class="count">0 pemenang</span>
+              <span id="gifterCount" class="count">0 gifter</span>
             </div>
           </aside>
         </div>

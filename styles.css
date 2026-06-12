@@ -704,6 +704,16 @@ button:hover:not(:disabled) {
   font-size: 0.86rem;
 }
 
+.spinner-side-search {
+  margin-bottom: 6px;
+}
+
+.spinner-side-search input {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 0.8rem;
+}
+
 .compact-footer {
   padding-top: 6px;
 }
