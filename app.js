@@ -30,13 +30,13 @@ const DEFAULT_SPIN_POOLS = [
 
 const DEFAULT_GIFT_RULES = [
   {
-    id: "rule-coin-1-random-mutasi",
+    id: "rule-coin-2-radioactive",
     matchType: "diamond",
-    matchValue: 1,
+    matchValue: 2,
     mode: "direct",
-    rewardAction: "Celestial Random Mutasi",
+    rewardAction: "Celestial RadioActive",
     unitCount: 1,
-    action: "Celestial Random Mutasi",
+    action: "Celestial RadioActive",
     locked: true
   },
   {
@@ -90,13 +90,13 @@ const DEFAULT_GIFT_RULES = [
     locked: true
   },
   {
-    id: "rule-heartme-molten-2",
+    id: "rule-heartme-radioactive",
     matchType: "name",
     matchValue: "heart me",
     mode: "direct",
-    rewardAction: "Celestial Molten 2",
+    rewardAction: "Celestial RadioActive",
     unitCount: 1,
-    action: "Celestial Molten 2",
+    action: "Celestial RadioActive",
     locked: true
   },
   {
@@ -526,7 +526,9 @@ function loadState() {
       "rule-heartme-celestial-mutasi-2",
       "rule-gg-celes-random",
       "rule-gg-krupuk-molten",
-      "rule-blowkiss-krupuk-rda"
+      "rule-blowkiss-krupuk-rda",
+      "rule-coin-1-random-mutasi",
+      "rule-heartme-molten-2"
     ];
     const hasOldDefault = state.giftRules.some((r) => OLD_DEFAULT_RULE_IDS.includes(r.id));
     if (hasOldDefault) {
@@ -540,13 +542,13 @@ function loadState() {
     }
 
     const criticalRuleIds = [
-      "rule-coin-1-random-mutasi",
+      "rule-coin-2-radioactive",
       "rule-coin-3-molten",
       "rule-coin-4-celestial-rda",
       "rule-coin-6-rda",
       "rule-coin-7-shadow",
       "rule-coin-12-electrical",
-      "rule-heartme-molten-2",
+      "rule-heartme-radioactive",
       "rule-fingerheart-max-br",
       "rule-default"
     ];
