@@ -1052,7 +1052,7 @@ function sendGiftToAuction(msg) {
   const backendUrl = resolveBackendUrl();
   if (!backendUrl) return;
   const bidder = msg.uniqueId || msg.nickname || "viewer";
-  const amount = Math.max(1, Number(msg.diamondCount || 0) * Math.max(1, Number(msg.repeatCount || 1)));
+  const amount = Math.max(1, Number(msg.diamondCount || 0));
   fetch(backendUrl.replace(/\/$/, "") + "/auction/gift-bid", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -1167,6 +1167,15 @@ function getGiftFeedStreakId(msg) {
   return `${userId}_${giftId}`;
 }
 
+function inferGiftQtyForCoins(repeatCount, totalCoins, allocatedCoins) {
+  const totalQty = Math.max(1, Number(repeatCount) || 1);
+  const coins = Math.max(1, Number(totalCoins) || 1);
+  const allocated = Math.max(1, Number(allocatedCoins) || 1);
+  const perGiftCoin = coins / totalQty;
+  if (!Number.isFinite(perGiftCoin) || perGiftCoin <= 0) return totalQty;
+  return Math.max(1, Math.round(allocated / perGiftCoin));
+}
+
 function getGiftEventKey(msg) {
   const parts = [msg && (msg.msgId || msg.eventId || msg.logId || msg.createTime || msg.timestamp)];
   const primary = parts[0];
@@ -1205,7 +1214,7 @@ function upsertGifterHistory(msg, now, streakId) {
   const eventKey = getGiftEventKey(msg);
   const repeatCount = Math.max(1, Number(msg.repeatCount) || 1);
   const diamondCount = Number(msg.diamondCount || 0);
-  const totalCoins = diamondCount * repeatCount;
+  const totalCoins = diamondCount;
   let historyKey = eventKey || `${streakId}:${now}:${repeatCount}:${diamondCount}`;
   let existingIndex = -1;
 
@@ -1350,7 +1359,7 @@ function addGiftItem(msg) {
   trimList(el.giftList, MAX_GIFT_ITEMS);
 
   if (!pendingStreak && msg.diamondCount) {
-    diamondsCount += msg.diamondCount * (msg.repeatCount || 1);
+    diamondsCount += Number(msg.diamondCount || 0);
     updateStats();
   }
 }
@@ -1476,7 +1485,7 @@ function processGiftRules(msg) {
   const giftName = normalizeKey(msg.giftName);
   const diamondCount = Number(msg.diamondCount || 0);
   const repeatCount = Math.max(1, Number(msg.repeatCount) || 1);
-  const totalCoins = diamondCount * repeatCount;
+  const totalCoins = diamondCount;
   const userLabel = msg.uniqueId ? `@${msg.uniqueId}` : (msg.nickname || "viewer");
   const isStreak = msg.giftType === 1;
   const isPendingStreak = isStreak && !msg.repeatEnd;
@@ -1514,7 +1523,7 @@ function processGiftRules(msg) {
       username: null,
       tiktokId: msg.uniqueId || null,
       giftName: msg.giftName || "gift",
-      diamondCount,
+      diamondCount: (options && options.allocatedCoins) || totalCoins,
       qty: rewardQty,
       giftQty: (options && options.giftQty) || repeatCount,
       source: "gift",
@@ -1544,7 +1553,7 @@ function processGiftRules(msg) {
       tiktokId: msg.uniqueId || null,
       giftName: msg.giftName || "gift",
       giftQty: spinQty,
-      diamondCount: diamondCount * spinQty,
+      diamondCount: totalCoins,
       spinResults,
       rollSequence,
       finalLabel: summarizeSpinResults(spinResults, rule.poolId),
@@ -1656,7 +1665,8 @@ function processGiftRules(msg) {
           const times = Number(combo[rule.id] || 0);
           if (times > 0) {
             fireDirectRule(rule, times * rule.outputQty, {
-              giftQty: times * rule.coinValue,
+              giftQty: inferGiftQtyForCoins(repeatCount, totalCoins, times * rule.coinValue),
+              allocatedCoins: times * rule.coinValue,
               consolidateKey: `${rule.id}:${msg.uniqueId || "unknown"}`
             });
           }
@@ -1671,9 +1681,9 @@ function processGiftRules(msg) {
           username: null,
           tiktokId: msg.uniqueId || null,
           giftName: msg.giftName || "gift",
-          diamondCount: 1,
+          diamondCount: remainder,
           qty: remainder,
-          giftQty: remainder,
+          giftQty: inferGiftQtyForCoins(repeatCount, totalCoins, remainder),
           source: "gift",
           unmatched: true,
           rewardMode: "direct",
@@ -1709,7 +1719,7 @@ function processGiftRules(msg) {
 function addJokiQueueEntry(entry) {
   const addedQty = Math.max(1, Number(entry.qty) || 1);
   const addedGiftQty = Math.max(1, Number(entry.giftQty) || addedQty);
-  const addedCoinsTotal = (Number(entry.diamondCount) || 0) * addedGiftQty;
+  const addedCoinsTotal = Number(entry.diamondCount) || 0;
   const consolidateKey = entry.consolidateKey
     || entry.ruleId
     || `${entry.giftName || "gift"}|${Number(entry.diamondCount) || 0}|${entry.tiktokId || "unknown"}`;
@@ -2288,9 +2298,7 @@ function handleImportFile(file) {
 function inferRuleForImportedEntry(entry) {
   if (!entry || !entry.giftName || entry.giftName === "-") return null;
   const diamondCount = Number(entry.diamondCount) || 0;
-  const totalCoins = diamondCount > 0
-    ? Math.max(1, Number(entry.giftQty) || Number(entry.qty) || 1) * diamondCount
-    : 0;
+  const totalCoins = diamondCount;
   return state.giftRules.find((rule) => {
     if (rule.matchType === "name") {
       return giftNameMatchesRule(entry.giftName, rule.matchValue);
