@@ -28,97 +28,135 @@ const DEFAULT_SPIN_POOLS = [
   }
 ];
 
-const DEFAULT_GIFT_RULES = [
-  {
-    id: "rule-coin-2-radioactive",
-    matchType: "diamond",
-    matchValue: 2,
-    mode: "direct",
-    rewardAction: "Celestial RadioActive",
-    unitCount: 1,
-    action: "Celestial RadioActive",
-    locked: true
-  },
-  {
-    id: "rule-coin-3-molten",
-    matchType: "diamond",
-    matchValue: 3,
-    mode: "direct",
-    rewardAction: "Krupuk Pagi Pagi Molten",
-    unitCount: 1,
-    action: "Krupuk Pagi Pagi Molten",
-    locked: true
-  },
-  {
-    id: "rule-coin-4-celestial-rda",
-    matchType: "diamond",
-    matchValue: 4,
-    mode: "direct",
-    rewardAction: "Celestial RDA",
-    unitCount: 1,
-    action: "Celestial RDA",
-    locked: true
-  },
-  {
-    id: "rule-coin-6-rda",
-    matchType: "diamond",
-    matchValue: 6,
-    mode: "direct",
-    rewardAction: "Krupuk Pagi Pagi RDA",
-    unitCount: 1,
-    action: "Krupuk Pagi Pagi RDA",
-    locked: true
-  },
-  {
-    id: "rule-coin-7-shadow",
-    matchType: "diamond",
-    matchValue: 7,
-    mode: "direct",
-    rewardAction: "Celestial Shadow",
-    unitCount: 1,
-    action: "Celestial Shadow",
-    locked: true
-  },
-  {
-    id: "rule-coin-12-electrical",
-    matchType: "diamond",
-    matchValue: 12,
-    mode: "direct",
-    rewardAction: "Celestial Electrical",
-    unitCount: 1,
-    action: "Celestial Electrical",
-    locked: true
-  },
-  {
-    id: "rule-heartme-radioactive",
-    matchType: "name",
-    matchValue: "heart me",
-    mode: "direct",
-    rewardAction: "Celestial RadioActive",
-    unitCount: 1,
-    action: "Celestial RadioActive",
-    locked: true
-  },
-  {
-    id: "rule-fingerheart-max-br",
-    matchType: "name",
-    matchValue: "finger heart",
-    mode: "direct",
-    rewardAction: "Max in 1 BR Kamu",
-    unitCount: 1,
-    action: "Max in 1 BR Kamu",
-    locked: true
-  },
-  {
-    id: "rule-default",
-    matchType: "any",
-    matchValue: "*",
-    mode: "direct",
-    rewardAction: "Belum diatur",
-    action: "Belum diatur",
-    locked: true
-  }
-];
+const DEFAULT_GIFT_RULES_BY_MODE = {
+  modeA: [
+    {
+      id: "rule-coin-3-celestial-rda",
+      matchType: "diamond",
+      matchValue: 3,
+      mode: "direct",
+      rewardAction: "Celestial RDA",
+      action: "Celestial RDA",
+      outputQty: 1,
+      locked: true
+    },
+    {
+      id: "rule-coin-4-krupuk-molten",
+      matchType: "diamond",
+      matchValue: 4,
+      mode: "direct",
+      rewardAction: "Krupuk Molten",
+      action: "Krupuk Molten",
+      outputQty: 1,
+      locked: true
+    },
+    {
+      id: "rule-coin-6-krupuk-rda",
+      matchType: "diamond",
+      matchValue: 6,
+      mode: "direct",
+      rewardAction: "Krupuk RDA",
+      action: "Krupuk RDA",
+      outputQty: 1,
+      locked: true
+    },
+    {
+      id: "rule-coin-7-celestial-shadow",
+      matchType: "diamond",
+      matchValue: 7,
+      mode: "direct",
+      rewardAction: "Celestial Shadow",
+      action: "Celestial Shadow",
+      outputQty: 1,
+      locked: true
+    },
+    {
+      id: "rule-coin-12-celestial-electrical",
+      matchType: "diamond",
+      matchValue: 12,
+      mode: "direct",
+      rewardAction: "Celestial Electrical",
+      action: "Celestial Electrical",
+      outputQty: 1,
+      locked: true
+    },
+    {
+      id: "rule-heartme-celestial-rda",
+      matchType: "name",
+      matchValue: "heart me",
+      mode: "direct",
+      rewardAction: "Celestial RDA",
+      action: "Celestial RDA",
+      outputQty: 1,
+      locked: true
+    },
+    {
+      id: "rule-fingerheart-max-br",
+      matchType: "name",
+      matchValue: "finger heart",
+      mode: "direct",
+      rewardAction: "Max in 1 BR Kamu",
+      action: "Max in 1 BR Kamu",
+      outputQty: 1,
+      locked: true
+    },
+    {
+      id: "rule-default",
+      matchType: "any",
+      matchValue: "*",
+      mode: "direct",
+      rewardAction: "Belum diatur",
+      action: "Belum diatur",
+      locked: true
+    }
+  ],
+  modeB: [
+    {
+      id: "rule-coin-3-kick1",
+      matchType: "diamond",
+      matchValue: 3,
+      mode: "direct",
+      rewardAction: "Kick Celes Mutasi",
+      action: "1x Kick Celes Mutasi",
+      outputQty: 1,
+      locked: true
+    },
+    {
+      id: "rule-coin-5-kick2",
+      matchType: "diamond",
+      matchValue: 5,
+      mode: "direct",
+      rewardAction: "Kick Celes Mutasi",
+      action: "2x Kick Celes Mutasi",
+      outputQty: 2,
+      locked: true
+    },
+    {
+      id: "rule-coin-10-kick5",
+      matchType: "diamond",
+      matchValue: 10,
+      mode: "direct",
+      rewardAction: "Kick Celes Mutasi",
+      action: "5x Kick Celes Mutasi",
+      outputQty: 5,
+      locked: true
+    },
+    {
+      id: "rule-default",
+      matchType: "any",
+      matchValue: "*",
+      mode: "direct",
+      rewardAction: "Belum diatur",
+      action: "Belum diatur",
+      locked: true
+    }
+  ]
+};
+
+function getDefaultGiftRules(mode = "modeA") {
+  const rules = DEFAULT_GIFT_RULES_BY_MODE[mode] || DEFAULT_GIFT_RULES_BY_MODE.modeA;
+  return rules.map((rule) => ({ ...rule }));
+}
 
 const POPULAR_GIFTS = [
   { name: "Heart Me", id: "heartme", value: "heart me" },
@@ -146,6 +184,7 @@ const state = {
   winners: [],
   jokiQueue: [],
   giftRules: [],
+  giftRuleMode: "modeA",
   spinPools: [],
   giftProgress: {},
   lastSpinEvent: null,
@@ -427,6 +466,7 @@ function saveState() {
     winners: state.winners,
     jokiQueue: state.jokiQueue,
     giftRules: state.giftRules,
+    giftRuleMode: state.giftRuleMode,
     spinPools: state.spinPools,
     giftProgress: state.giftProgress,
     lastSpinEvent: state.lastSpinEvent,
@@ -497,9 +537,10 @@ function loadState() {
       }
       return normalized;
     });
+    state.giftRuleMode = parsed.giftRuleMode || "modeA";
     state.giftRules = Array.isArray(parsed.giftRules) && parsed.giftRules.length
       ? parsed.giftRules
-      : DEFAULT_GIFT_RULES.map((rule) => ({ ...rule }));
+      : getDefaultGiftRules(state.giftRuleMode);
 
     const OLD_DEFAULT_RULE_IDS = [
       "rule-diamond-1",
@@ -528,29 +569,23 @@ function loadState() {
       "rule-gg-krupuk-molten",
       "rule-blowkiss-krupuk-rda",
       "rule-coin-1-random-mutasi",
-      "rule-heartme-molten-2"
+      "rule-heartme-molten-2",
+      "rule-coin-2-radioactive",
+      "rule-heartme-radioactive"
     ];
     const hasOldDefault = state.giftRules.some((r) => OLD_DEFAULT_RULE_IDS.includes(r.id));
     if (hasOldDefault) {
-      state.giftRules = DEFAULT_GIFT_RULES.map((rule) => ({ ...rule }));
+      state.giftRules = getDefaultGiftRules(state.giftRuleMode);
     } else {
       const userRuleIds = new Set(state.giftRules.map((r) => r.id));
-      const missingDefaults = DEFAULT_GIFT_RULES.filter((r) => !userRuleIds.has(r.id));
+      const missingDefaults = getDefaultGiftRules(state.giftRuleMode).filter((r) => !userRuleIds.has(r.id));
       if (missingDefaults.length > 0) {
         state.giftRules = [...state.giftRules, ...missingDefaults];
       }
     }
 
     const criticalRuleIds = [
-      "rule-coin-2-radioactive",
-      "rule-coin-3-molten",
-      "rule-coin-4-celestial-rda",
-      "rule-coin-6-rda",
-      "rule-coin-7-shadow",
-      "rule-coin-12-electrical",
-      "rule-heartme-radioactive",
-      "rule-fingerheart-max-br",
-      "rule-default"
+      ...getDefaultGiftRules(state.giftRuleMode).map((rule) => rule.id)
     ];
     const existingIds = new Set(state.giftRules.map((r) => r.id));
     let rulesInjected = false;
@@ -559,7 +594,8 @@ function loadState() {
     }
     criticalRuleIds.forEach((id) => {
       if (!existingIds.has(id)) {
-        const def = DEFAULT_GIFT_RULES.find((r) => r.id === id);
+        const modeDefaults = getDefaultGiftRules(state.giftRuleMode);
+        const def = modeDefaults.find((r) => r.id === id);
         if (def) {
           state.giftRules.push({ ...def });
           rulesInjected = true;
@@ -632,8 +668,8 @@ function loadState() {
     state.backendUrl = parsed.backendUrl || "";
   } catch (err) {
     console.warn("Failed to parse saved state", err);
-    state.giftRules = DEFAULT_GIFT_RULES.map((rule) => ({ ...rule }));
-  }
+      state.giftRules = getDefaultGiftRules(state.giftRuleMode);
+    }
 }
 
 function updateCounts() {
@@ -1479,9 +1515,73 @@ function processGiftRules(msg) {
   }
 
   const diamondRules = state.giftRules.filter((r) => r.matchType === "diamond");
-  for (const rule of diamondRules) {
-    if (checkRule(rule)) {
-      processRule(rule);
+  if (diamondRules.length > 0 && totalCoins > 0) {
+    const normalizedRules = diamondRules
+      .map((rule) => ({
+        ...rule,
+        coinValue: Math.max(1, Number(rule.matchValue) || 1),
+        outputQty: Math.max(1, Number(rule.outputQty) || 1)
+      }))
+      .sort((a, b) => a.coinValue - b.coinValue);
+
+    const dp = Array(totalCoins + 1).fill(null);
+    dp[0] = {};
+
+    for (let amount = 1; amount <= totalCoins; amount += 1) {
+      normalizedRules.forEach((rule) => {
+        if (amount >= rule.coinValue && dp[amount - rule.coinValue]) {
+          const previous = dp[amount - rule.coinValue];
+          const next = { ...previous, [rule.id]: (previous[rule.id] || 0) + 1 };
+          const currentCount = dp[amount] ? Object.values(dp[amount]).reduce((sum, qty) => sum + qty, 0) : Infinity;
+          const nextCount = Object.values(next).reduce((sum, qty) => sum + qty, 0);
+          if (!dp[amount] || nextCount < currentCount) {
+            dp[amount] = next;
+          }
+        }
+      });
+    }
+
+    let matchedAmount = totalCoins;
+    while (matchedAmount > 0 && !dp[matchedAmount]) {
+      matchedAmount -= 1;
+    }
+
+    if (matchedAmount > 0 && dp[matchedAmount]) {
+      const combo = dp[matchedAmount];
+      normalizedRules
+        .slice()
+        .sort((a, b) => b.coinValue - a.coinValue)
+        .forEach((rule) => {
+          const times = Number(combo[rule.id] || 0);
+          if (times > 0) {
+            fireDirectRule(rule, times * rule.outputQty, {
+              giftQty: times * rule.coinValue,
+              consolidateKey: `${rule.id}:${msg.uniqueId || "unknown"}`
+            });
+          }
+        });
+
+      const remainder = totalCoins - matchedAmount;
+      if (remainder > 0) {
+        addJokiQueueEntry({
+          action: `${remainder}c belum diatur`,
+          consolidateKey: `remainder:${remainder}:${msg.uniqueId || "unknown"}`,
+          user: getDisplayLabel(msg),
+          username: null,
+          tiktokId: msg.uniqueId || null,
+          giftName: msg.giftName || "gift",
+          diamondCount: 1,
+          qty: remainder,
+          giftQty: remainder,
+          source: "gift",
+          unmatched: true,
+          rewardMode: "direct",
+          ruleId: null,
+          unitCount: 1,
+          isCumulative: false
+        });
+      }
+      saveState();
       return;
     }
   }
@@ -2264,7 +2364,7 @@ function resetGiftRulesToDefault() {
     "Reset Gift Rules ke Default?",
     "Semua rules akan dikembalikan ke default. Rules custom yang Anda buat akan hilang.",
     () => {
-      state.giftRules = DEFAULT_GIFT_RULES.map((rule) => ({ ...rule }));
+      state.giftRules = getDefaultGiftRules(state.giftRuleMode);
       state.spinPools = DEFAULT_SPIN_POOLS.map((pool) => ({ ...pool, items: pool.items.map((item) => ({ ...item })) }));
       state.giftProgress = {};
       saveState();
@@ -2929,6 +3029,18 @@ function bindEvents() {
     jokiStatusFilter = event.target.value || "all";
     renderJokiQueue();
   });
+  if (el.giftModeSelect) {
+    el.giftModeSelect.addEventListener("change", (event) => {
+      const nextMode = event.target.value || "modeA";
+      if (nextMode === state.giftRuleMode) return;
+      state.giftRuleMode = nextMode;
+      state.giftRules = getDefaultGiftRules(state.giftRuleMode);
+      state.giftProgress = {};
+      saveState();
+      renderGiftRules();
+      showToast(`Mode gift diganti ke ${nextMode === "modeA" ? "Mode 1" : "Mode 2"}`, "success");
+    });
+  }
   el.exportRulesBtn.addEventListener("click", () => {
     if (state.giftRules.length === 0) {
       showToast("Belum ada gift rule", "error");
@@ -2986,6 +3098,7 @@ function init() {
   el.numberMax = $("numberMax");
   el.jokiList = $("jokiList");
   el.jokiSearchInput = $("jokiSearchInput");
+  el.giftModeSelect = $("giftModeSelect");
   el.jokiStatusFilter = $("jokiStatusFilter");
   el.jokiCount = $("jokiCount");
   el.clearJokiBtn = $("clearJokiBtn");
@@ -3024,7 +3137,7 @@ function init() {
 
   loadState();
   if (!state.giftRules.length) {
-    state.giftRules = DEFAULT_GIFT_RULES.map((rule) => ({ ...rule }));
+    state.giftRules = getDefaultGiftRules(state.giftRuleMode);
   }
   if (!state.spinPools.length) {
     state.spinPools = DEFAULT_SPIN_POOLS.map((pool) => ({ ...pool, items: pool.items.map((item) => ({ ...item })) }));
@@ -3033,6 +3146,9 @@ function init() {
 
   el.usernameInput.value = state.lastUsername || "";
   el.backendInput.value = state.backendUrl || "";
+  if (el.giftModeSelect) {
+    el.giftModeSelect.value = state.giftRuleMode || "modeA";
+  }
   updateOverlayLink();
   el.removeAfterSpin.checked = !!state.settings.removeAfterSpin;
   el.numberMin.value = state.settings.numberMin;
