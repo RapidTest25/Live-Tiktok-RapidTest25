@@ -748,13 +748,19 @@ function loadState() {
 }
 
 function updateCounts() {
-  el.winnerCount.textContent = `${state.winners.length} pemenang`;
-  el.sessionCount.textContent = `${state.sessionNumbers.length} angka`;
+  if (el.winnerCount) {
+    el.winnerCount.textContent = `${state.winners.length} pemenang`;
+  }
+  if (el.sessionCount) {
+    el.sessionCount.textContent = `${state.sessionNumbers.length} angka`;
+  }
   const activeJoki = state.jokiQueue.filter((e) => e.status !== "done").length;
   const totalJoki = state.jokiQueue.length;
-  el.jokiCount.textContent = activeJoki === totalJoki
-    ? `${totalJoki} dalam antrean`
-    : `${activeJoki} aktif • ${totalJoki - activeJoki} selesai`;
+  if (el.jokiCount) {
+    el.jokiCount.textContent = activeJoki === totalJoki
+      ? `${totalJoki} dalam antrean`
+      : `${activeJoki} aktif • ${totalJoki - activeJoki} selesai`;
+  }
 }
 
 function setStatus(message, type) {
