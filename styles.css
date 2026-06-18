@@ -631,6 +631,47 @@ button:hover:not(:disabled) {
   flex-shrink: 0;
 }
 
+.joki-mode-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  font-size: 0.68rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.joki-mode-chip.br {
+  background: rgba(59, 130, 246, 0.10);
+  color: #1d4ed8;
+  border-color: rgba(59, 130, 246, 0.18);
+}
+
+.joki-mode-chip.kick {
+  background: rgba(255, 107, 53, 0.10);
+  color: #c2410c;
+  border-color: rgba(255, 107, 53, 0.18);
+}
+
+.joki-kick-note-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(251, 191, 36, 0.12);
+  color: #8a5a00;
+  border: 1px dashed rgba(251, 191, 36, 0.3);
+  font-size: 0.66rem;
+  font-weight: 600;
+  cursor: text;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .joki-queue-no {
   display: inline-flex;
   align-items: center;

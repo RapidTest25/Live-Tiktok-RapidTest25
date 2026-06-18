@@ -158,6 +158,81 @@ function getDefaultGiftRules(mode = "modeA") {
   return rules.map((rule) => ({ ...rule }));
 }
 
+function resolveGiftModeResult(mode, giftName, totalCoins) {
+  const rules = getDefaultGiftRules(mode).filter((rule) => rule.matchType !== "any");
+  const nameRules = rules.filter((rule) => rule.matchType === "name");
+  const matchedName = nameRules.find((rule) => giftNameMatchesRule(giftName, rule.matchValue));
+  if (matchedName) {
+    return {
+      action: matchedName.rewardAction || matchedName.action,
+      ruleId: matchedName.id,
+      unmatched: false
+    };
+  }
+
+  const coinRules = rules
+    .filter((rule) => rule.matchType === "diamond")
+    .map((rule) => ({
+      ...rule,
+      coinValue: Math.max(1, Number(rule.matchValue) || 1),
+      outputQty: Math.max(1, Number(rule.outputQty) || 1)
+    }))
+    .sort((a, b) => a.coinValue - b.coinValue);
+
+  if (!coinRules.length || totalCoins <= 0) {
+    return { action: "Belum diatur", ruleId: null, unmatched: true };
+  }
+
+  const dp = Array(totalCoins + 1).fill(null);
+  dp[0] = {};
+  for (let amount = 1; amount <= totalCoins; amount += 1) {
+    coinRules.forEach((rule) => {
+      if (amount >= rule.coinValue && dp[amount - rule.coinValue]) {
+        const previous = dp[amount - rule.coinValue];
+        const next = { ...previous, [rule.id]: (previous[rule.id] || 0) + 1 };
+        const currentCount = dp[amount] ? Object.values(dp[amount]).reduce((sum, qty) => sum + qty, 0) : Infinity;
+        const nextCount = Object.values(next).reduce((sum, qty) => sum + qty, 0);
+        if (!dp[amount] || nextCount < currentCount) {
+          dp[amount] = next;
+        }
+      }
+    });
+  }
+
+  let matchedAmount = totalCoins;
+  while (matchedAmount > 0 && !dp[matchedAmount]) matchedAmount -= 1;
+  if (!matchedAmount || !dp[matchedAmount]) {
+    return { action: "Belum diatur", ruleId: null, unmatched: true };
+  }
+
+  const combo = dp[matchedAmount];
+  const parts = [];
+  coinRules.slice().sort((a, b) => b.coinValue - a.coinValue).forEach((rule) => {
+    const times = Number(combo[rule.id] || 0);
+    if (!times) return;
+    const totalOutput = times * rule.outputQty;
+    const label = rule.rewardAction || rule.action;
+    if (totalOutput > 1 && /kick celes mutasi/i.test(label)) {
+      parts.push(`${totalOutput}x ${label}`);
+    } else if (times > 1) {
+      parts.push(`${times}x ${label}`);
+    } else {
+      parts.push(label);
+    }
+  });
+
+  const remainder = totalCoins - matchedAmount;
+  if (remainder > 0) {
+    parts.push(`${remainder}c belum diatur`);
+  }
+
+  return {
+    action: parts.join(", "),
+    ruleId: Object.keys(combo).join(",") || null,
+    unmatched: remainder > 0
+  };
+}
+
 const POPULAR_GIFTS = [
   { name: "Heart Me", id: "heartme", value: "heart me" },
   { name: "Rose", id: "rose", value: "rose" },
@@ -1678,6 +1753,7 @@ function addJokiQueueEntry(entry) {
     notes: entry.notes || "",
     unmatched: !!entry.unmatched,
     rewardMode: entry.rewardMode || "direct",
+    giftMode: entry.giftMode || (entry.source === "gift" ? state.giftRuleMode : null),
     spinResults: entry.spinResults || null,
     poolId: entry.poolId || null,
     ruleId: entry.ruleId || null,
@@ -1783,6 +1859,25 @@ function renderJokiQueue() {
     actionBadge.title = "Klik untuk edit keterangan antrean";
     actionBadge.addEventListener("click", () => startEditActionInline(entry.id, actionBadge));
     body.appendChild(actionBadge);
+
+    if (entry.source === "gift") {
+      const modeBtn = document.createElement("button");
+      modeBtn.className = `joki-mode-chip ${entry.giftMode === "modeB" ? "kick" : "br"}`;
+      modeBtn.type = "button";
+      modeBtn.textContent = entry.giftMode === "modeB" ? "Kick" : "BR";
+      modeBtn.title = "Ganti mode hadiah";
+      modeBtn.addEventListener("click", () => toggleJokiGiftMode(entry.id));
+      body.appendChild(modeBtn);
+
+      if (entry.giftMode === "modeB") {
+        const noteChip = document.createElement("span");
+        noteChip.className = "joki-kick-note-chip";
+        noteChip.textContent = entry.notes || "Isi BR / mutasi hasil kick";
+        noteChip.title = "Klik untuk isi catatan kick";
+        noteChip.addEventListener("click", () => startEditGiftNoteInline(entry.id, noteChip));
+        body.appendChild(noteChip);
+      }
+    }
 
     if (entry.giftName && entry.giftName !== "-") {
       const giftEl = document.createElement("span");
@@ -2500,6 +2595,86 @@ function updateJokiAction(id, newAction) {
   }
   saveState();
   renderJokiQueue();
+}
+
+function toggleJokiGiftMode(id) {
+  const entry = state.jokiQueue.find((item) => item.id === id);
+  if (!entry || entry.source !== "gift") return;
+
+  const nextMode = entry.giftMode === "modeB" ? "modeA" : "modeB";
+  const totalCoins = Number(entry.diamondCount) || 0;
+  const result = resolveGiftModeResult(nextMode, entry.giftName, totalCoins);
+
+  entry.giftMode = nextMode;
+  entry.action = result.action;
+  entry.ruleId = result.ruleId;
+  entry.unmatched = !!result.unmatched;
+  if (nextMode === "modeB" && !entry.notes) {
+    entry.notes = "Isi BR / mutasi hasil kick";
+  }
+  saveState();
+  renderJokiQueue();
+}
+
+function updateJokiNotes(id, newNotes) {
+  const entry = state.jokiQueue.find((item) => item.id === id);
+  if (!entry) return;
+  entry.notes = String(newNotes || "").trim();
+  saveState();
+  renderJokiQueue();
+}
+
+function startEditGiftNoteInline(entryId, targetEl) {
+  const entry = state.jokiQueue.find((e) => e.id === entryId);
+  if (!entry || !targetEl) return;
+
+  const body = targetEl.closest(".joki-body");
+  if (!body || body.querySelector(".joki-note-input")) return;
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.value = entry.notes || "";
+  input.placeholder = "isi BR / mutasi hasil kick";
+  input.className = "joki-note-input";
+  input.style.cssText = "font-size:0.68rem;font-weight:600;color:#6b4f08;background:#fff;border:1px solid rgba(251,191,36,0.35);border-radius:4px;padding:2px 6px;min-width:120px;";
+
+  const saveBtn = document.createElement("button");
+  saveBtn.className = "joki-note-save";
+  saveBtn.textContent = "✓";
+  saveBtn.type = "button";
+  saveBtn.style.cssText = "font-size:0.68rem;padding:2px 5px;border-radius:4px;background:#fbbf24;color:#3a2a00;border:none;cursor:pointer;";
+
+  const cancelBtn = document.createElement("button");
+  cancelBtn.className = "joki-note-cancel";
+  cancelBtn.textContent = "✕";
+  cancelBtn.type = "button";
+  cancelBtn.style.cssText = "font-size:0.68rem;padding:2px 5px;border-radius:4px;background:transparent;color:var(--muted);border:1px solid var(--border);cursor:pointer;";
+
+  targetEl.replaceWith(input);
+  input.insertAdjacentElement("afterend", saveBtn);
+  saveBtn.insertAdjacentElement("afterend", cancelBtn);
+
+  const commit = () => updateJokiNotes(entryId, input.value);
+  const cancel = () => renderJokiQueue();
+
+  input.focus();
+  input.select();
+  saveBtn.addEventListener("click", commit);
+  cancelBtn.addEventListener("click", cancel);
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      commit();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      cancel();
+    }
+  });
+  input.addEventListener("blur", () => {
+    setTimeout(() => {
+      if (document.body.contains(input)) commit();
+    }, 120);
+  });
 }
 
 function startEditRobloxInline(entryId, targetEl) {
