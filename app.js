@@ -736,6 +736,15 @@ function updateOverlayLink() {
   }
 }
 
+function renderGiftModeCards() {
+  if (el.modeACard) {
+    el.modeACard.classList.toggle("active", state.giftRuleMode === "modeA");
+  }
+  if (el.modeBCard) {
+    el.modeBCard.classList.toggle("active", state.giftRuleMode === "modeB");
+  }
+}
+
 async function syncOverlayState() {
   const backendUrl = resolveBackendUrl();
   if (!backendUrl || !state.lastSpinEvent) return;
@@ -3029,16 +3038,28 @@ function bindEvents() {
     jokiStatusFilter = event.target.value || "all";
     renderJokiQueue();
   });
-  if (el.giftModeSelect) {
-    el.giftModeSelect.addEventListener("change", (event) => {
-      const nextMode = event.target.value || "modeA";
-      if (nextMode === state.giftRuleMode) return;
-      state.giftRuleMode = nextMode;
+  if (el.modeACard) {
+    el.modeACard.addEventListener("click", () => {
+      if (state.giftRuleMode === "modeA") return;
+      state.giftRuleMode = "modeA";
       state.giftRules = getDefaultGiftRules(state.giftRuleMode);
       state.giftProgress = {};
       saveState();
       renderGiftRules();
-      showToast(`Mode gift diganti ke ${nextMode === "modeA" ? "Mode 1" : "Mode 2"}`, "success");
+      renderGiftModeCards();
+      showToast("Mode gift diganti ke Mode BR", "success");
+    });
+  }
+  if (el.modeBCard) {
+    el.modeBCard.addEventListener("click", () => {
+      if (state.giftRuleMode === "modeB") return;
+      state.giftRuleMode = "modeB";
+      state.giftRules = getDefaultGiftRules(state.giftRuleMode);
+      state.giftProgress = {};
+      saveState();
+      renderGiftRules();
+      renderGiftModeCards();
+      showToast("Mode gift diganti ke Mode Kick", "success");
     });
   }
   el.exportRulesBtn.addEventListener("click", () => {
@@ -3098,7 +3119,8 @@ function init() {
   el.numberMax = $("numberMax");
   el.jokiList = $("jokiList");
   el.jokiSearchInput = $("jokiSearchInput");
-  el.giftModeSelect = $("giftModeSelect");
+  el.modeACard = $("modeACard");
+  el.modeBCard = $("modeBCard");
   el.jokiStatusFilter = $("jokiStatusFilter");
   el.jokiCount = $("jokiCount");
   el.clearJokiBtn = $("clearJokiBtn");
@@ -3146,9 +3168,7 @@ function init() {
 
   el.usernameInput.value = state.lastUsername || "";
   el.backendInput.value = state.backendUrl || "";
-  if (el.giftModeSelect) {
-    el.giftModeSelect.value = state.giftRuleMode || "modeA";
-  }
+  renderGiftModeCards();
   updateOverlayLink();
   el.removeAfterSpin.checked = !!state.settings.removeAfterSpin;
   el.numberMin.value = state.settings.numberMin;
