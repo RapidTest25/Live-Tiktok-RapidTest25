@@ -635,12 +635,14 @@ button:hover:not(:disabled) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 2px 7px;
+  padding: 3px 9px;
   border-radius: 6px;
   border: 1px solid transparent;
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   font-weight: 800;
   cursor: pointer;
+  white-space: nowrap;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03);
 }
 
 .joki-mode-chip.br {
@@ -666,7 +668,7 @@ button:hover:not(:disabled) {
   font-size: 0.66rem;
   font-weight: 600;
   cursor: text;
-  max-width: 180px;
+  max-width: 220px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

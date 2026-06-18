@@ -1853,18 +1853,11 @@ function renderJokiQueue() {
       body.appendChild(tiktokIdEl);
     }
 
-    const actionBadge = document.createElement("span");
-    actionBadge.className = "joki-action-chip";
-    actionBadge.textContent = getJokiBadgeText(entry);
-    actionBadge.title = "Klik untuk edit keterangan antrean";
-    actionBadge.addEventListener("click", () => startEditActionInline(entry.id, actionBadge));
-    body.appendChild(actionBadge);
-
     if (entry.source === "gift") {
       const modeBtn = document.createElement("button");
       modeBtn.className = `joki-mode-chip ${entry.giftMode === "modeB" ? "kick" : "br"}`;
       modeBtn.type = "button";
-      modeBtn.textContent = entry.giftMode === "modeB" ? "Kick" : "BR";
+      modeBtn.textContent = entry.giftMode === "modeB" ? "Mode Kick" : "Mode BR";
       modeBtn.title = "Ganti mode hadiah";
       modeBtn.addEventListener("click", () => toggleJokiGiftMode(entry.id));
       body.appendChild(modeBtn);
@@ -1878,6 +1871,13 @@ function renderJokiQueue() {
         body.appendChild(noteChip);
       }
     }
+
+    const actionBadge = document.createElement("span");
+    actionBadge.className = "joki-action-chip";
+    actionBadge.textContent = getJokiBadgeText(entry);
+    actionBadge.title = "Klik untuk edit keterangan antrean";
+    actionBadge.addEventListener("click", () => startEditActionInline(entry.id, actionBadge));
+    body.appendChild(actionBadge);
 
     if (entry.giftName && entry.giftName !== "-") {
       const giftEl = document.createElement("span");
