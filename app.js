@@ -165,6 +165,7 @@ function resolveGiftModeResult(mode, giftName, totalCoins) {
   if (matchedName) {
     return {
       action: matchedName.rewardAction || matchedName.action,
+      qty: Math.max(1, Number(matchedName.outputQty) || 1),
       ruleId: matchedName.id,
       unmatched: false
     };
@@ -207,11 +208,20 @@ function resolveGiftModeResult(mode, giftName, totalCoins) {
 
   const combo = dp[matchedAmount];
   const parts = [];
+  let sharedLabel = null;
+  let sharedQty = 0;
+  let mixedLabels = false;
   coinRules.slice().sort((a, b) => b.coinValue - a.coinValue).forEach((rule) => {
     const times = Number(combo[rule.id] || 0);
     if (!times) return;
     const totalOutput = times * rule.outputQty;
     const label = rule.rewardAction || rule.action;
+    if (sharedLabel === null) {
+      sharedLabel = label;
+    } else if (sharedLabel !== label) {
+      mixedLabels = true;
+    }
+    sharedQty += totalOutput;
     if (totalOutput > 1 && /kick celes mutasi/i.test(label)) {
       parts.push(`${totalOutput}x ${label}`);
     } else if (times > 1) {
@@ -227,7 +237,8 @@ function resolveGiftModeResult(mode, giftName, totalCoins) {
   }
 
   return {
-    action: parts.join(", "),
+    action: !mixedLabels && sharedLabel ? sharedLabel : parts.join(", "),
+    qty: !mixedLabels && sharedLabel ? sharedQty : null,
     ruleId: Object.keys(combo).join(",") || null,
     unmatched: remainder > 0
   };
@@ -2613,6 +2624,9 @@ function toggleJokiGiftMode(id) {
 
   entry.giftMode = nextMode;
   entry.action = result.action;
+  if (Number.isFinite(result.qty) && result.qty > 0) {
+    entry.qty = result.qty;
+  }
   entry.ruleId = result.ruleId;
   entry.unmatched = !!result.unmatched;
   if (nextMode === "modeB" && !entry.notes) {
