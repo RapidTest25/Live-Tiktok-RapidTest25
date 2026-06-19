@@ -3,6 +3,7 @@ const MAX_CHAT_ITEMS = 200;
 const MAX_GIFT_ITEMS = 120;
 const MAX_SESSION_ITEMS = 300;
 const MAX_JOKI_ITEMS = 200;
+const GIFT_MERGE_WINDOW_MS = 12000;
 const SPIN_RESULT_REVEAL_MS = 3200;
 const WHEEL_COLORS = [
   "#ffb703",
@@ -1730,7 +1731,8 @@ function addJokiQueueEntry(entry) {
       item.source === "gift" &&
       item.tiktokId === entry.tiktokId &&
       (item.consolidateKey || item.matchKey) === consolidateKey &&
-      item.status === "pending"
+      item.status === "pending" &&
+      (Date.now() - Number(item.lastAddedAt || item.time || 0)) <= GIFT_MERGE_WINDOW_MS
     );
     if (existing) {
       if (entry.isCumulative) {
